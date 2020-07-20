@@ -1,0 +1,14 @@
+{
+    "path":"s3://bucketname/path/to/key",
+    "corners":{"0":[[0,300],[200,300],[0,500],[200,500]]},
+    "nest":{"0":[[0,20],[20,30],[0,30],[20,20]]},
+    "pairname":"V116",
+    "headplate": true,
+    "food":null,
+    "water":null,
+    "pre": "video_name",
+    "post": "video_name",
+    "length":30.20,
+    "lightcycle":[0,300,400],
+    "description":"Text description of what happens in this portion of the video- any phenomena not described by the above. "
+}
