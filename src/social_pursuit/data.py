@@ -1,10 +1,11 @@
 import json 
 import os
-from moviepy.editor import VideoFileClip
-import boto3
-from botocore.exceptions import ClientError
+import yaml
+#from moviepy.editor import VideoFileClip
+#import boto3
+#from botocore.exceptions import ClientError
 
-s3_client = boto3.client("s3")
+#s3_client = boto3.client("s3")
 
 package_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -47,14 +48,32 @@ class PursuitTraces(object):
 
         """
         self.metadata = self.__load_spec(filename)
-        assert self.__check_data_integrity()
+        clean_experiments = self.__check_data_integrity()
+        print(clean_experiments)
 
     def __load_spec(self,filename):
+        """
+        Load specification file. Include linting to make sure this is the right file later. 
+        """
         with open(filename,"r") as f:
             spec = json.load(f)
         return spec
 
+    def __load_config(self,configname):
+        """
+        Load the configuration file corresponding to a particular experiment. 
+        """
+        with open(configname,"r") as f:
+            try:
+                yaml_content = yaml.safe_load(f)
+            except yaml.scanner.ScannerError as ve:
+                raise ValueError("Yaml is misformatted.")
+        return yaml_content
+
     def __check_data_integrity(self):
+        """Check that the videos, configuration files, and traces are included as expected. 
+
+        """
         try:
             self.metadata
         except AttributeError:
@@ -63,11 +82,81 @@ class PursuitTraces(object):
         all_traces = self.metadata["traces_expected"]
 
         path = self.metadata["trace_directory"]
-        
+        self.path = path
+        ## get all files in the trace directory. 
+        all_contents = os.listdir(path)
 
+        cleared_traces = []
+        all_resources = ["config","video","traces"]
         for trace_dict in all_traces:
-            print(trace_dict)
-        assert false
+            config_exists = self.__check_config(trace_dict,all_contents)
+            video_exists = self.__check_video(trace_dict,all_contents)
+            traces_exist,trace_nb = self.__check_traces(trace_dict,all_contents)
+            all_conditions = [config_exists,video_exists,traces_exist]
+            approved = all(all_conditions)
+            if approved:
+                trace_dict["nb_trace_sets"] = trace_nb
+                cleared_traces.append(trace_dict)
+            else:
+                "Name missing resources:"
+                missing_resources = [a for i,a in enumerate(all_resources) if all_conditions[i] is False]
+                print("ATTENTION: Experiment {e} has errors with the following resources: {l}. It will not be included in further analysis.".format(e = trace_dict["ExperimentName"],l = missing_resources))
+
+        return cleared_traces
+
+    def __check_config(self,trace_dict,all_contents):
+        """
+        Simple condition to check if config is in the specified directory. 
+        """
+        cond = trace_dict["ConfigName"] in all_contents
+        return cond
+    
+    def __check_video(self,trace_dict,all_contents):
+        """
+        Simple condition to check if video is in the specified directory. 
+        """
+        cond = trace_dict["VideoName"] in all_contents
+        return cond
+
+    def __check_traces(self,trace_dict,all_contents):
+        """
+        Condition to check if a contiguous series of traces for each roi are included. Depends upon the config existing.  
+        Right now just checks that there are the same number of traces for each roi, does not account for dropped traces in all rois or 
+        the case where there are an equivalent number of drops in each roi.
+        """
+        if self.__check_config(trace_dict,all_contents):
+            ## Get config
+            config = self.__load_config(os.path.join(self.path,trace_dict["ConfigName"]))
+            ## Get number of boxes we expect from config. 
+            boxes = config["coordinates"].keys()
+            box_indices = [int(list(filter(str.isdigit,b))[0]) for b in boxes]
+            ## Get the video files for each of these boxes and ensure that there are an equal number of each. 
+            roi_lambdas = [lambda p: self.__check_trace_function(trace_dict["ExperimentName"],r,p) for r in box_indices]
+            per_lambda = []
+            for l in roi_lambdas:
+                out = filter(l,all_contents)
+                per_lambda.append(list(out))
+            lens = [len(p) for p in per_lambda]
+            result = all(e == lens[0] for e in lens)
+            return result,lens[0]
+        else:
+            return False,None
+    
+    def __check_trace_function(self,experiment_name,roi_index,pathname):
+        """ Function to be curried when checking for existence of data files. 
+
+        :param experiment_name: the name of the experiment that we are looking for. Will be used to prefix the string we are looking for. 
+        :param roi_index: the integer giving the roi within the video that shows the mice we are observing.  
+        :param pathname: the name of the path that we are evaluating against the condition given by first two functions. 
+        """
+        formatted_prefix = "{e}roi_{r}".format(e=experiment_name,r=roi_index)
+
+        prefix = pathname.startswith(formatted_prefix)
+        suffix = pathname.endswith(".mat")
+        cond = prefix and suffix
+        return cond
+        
+        
 
 
 

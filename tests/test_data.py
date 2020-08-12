@@ -1,14 +1,14 @@
 # Test the data module
 import pytest
 #from botocore.stub import Stubber
-from social_pursuit.data import PursuitVideo,PursuitTraces,s3_client,transfer_if_not_found
+from social_pursuit.data import PursuitTraces#PursuitVideo,PursuitTraces,s3_client,transfer_if_not_found
 
 
-@pytest.fixture(autouse=False)
-def s3_stub():
-    with Stubber(s3_client) as stubber:
-        yield stubber
-        stubber.assert_no_pending_responses()
+#@pytest.fixture(autouse=False)
+#def s3_stub():
+#    with Stubber(s3_client) as stubber:
+#        yield stubber
+#        stubber.assert_no_pending_responses()
 
 
 def test_PursuitTraces():
