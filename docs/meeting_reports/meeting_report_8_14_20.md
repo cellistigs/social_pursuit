@@ -37,9 +37,18 @@ Total analysis time: ~6 hours per video x 11 videos * 3 mice = 198 hours of beha
 * Automated extraction of pursuit events. I took the output of the automated tracking pipeline, and isolated out pursuit events where one animal is chasing another. In order to perform this isolation I found all detected pursuit times, took a window around them, and saved this data independently for easy querying. To be somewhat conservative, I further filtered pursuit events (here defined simply by the velocities of both animals) by the following criteria: 1) animals must be closer than 30 pixels at some point in the pursuit event. 2) animal speeds must not exceed 20 units/frame during the pursuit event. I did not include a criterion for being outside the nest, as nests here were fairly loose in construction, and animals could be tracked within them.   
 
 * Single Event Analysis: Plots of each individual filtered pursuit event. I generated figures that plot the start (circle), end (cross) and trajectory of individual pursuit events that also include nest position, like so:  
-![example plot](images/example_trace1.png)
+![example plot](images/example_trace1.png) 
 
-* Plots of spatial distribution for pursuit events for each experiment.  
+    * Did not exclude events in the nest due to increased visibility. 
+    * For each extracted pursuit event, generate compact descriptions of traces, and which animal leads, with visualization.
+        * Red indicates dam, blue indicates virgin (throughout)
+        * Plot normalized to box size.  
+        * Nest indicated as blue rectangle
+        * Trajectory starts indicated as circles, trajectory ends indicated as crosses
+        * Dotted lines indicate individual tracked points.
+        * Caveat: sometimes trace can be misleading in showing which animal pursued which other.
 
-* Quantification of pursuit events over time: proportion dictated by one animal or another. I aggregated the pursuit events  
+
+* Large Scale Analysis: Quantification of pursuit events over longer time bins (~30 minutes - ~5.5 hours)
+    * Quantification of pursuit events over time: proportion dictated by one animal or another. I aggregated the pursuit events  
 
