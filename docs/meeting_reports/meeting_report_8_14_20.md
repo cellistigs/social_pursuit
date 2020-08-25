@@ -65,6 +65,7 @@ See slides for accompanying video.
     * Considered time bins of 40 minutes, and aggregated all pursuit events found during that time. 
     * Optimal to look for patterns in bouts of interactions. 
 ![example aggregate plot 0](images/TempTrial5_Aggregate_Pursuit_Plots_ROI_2/AGGREGATE_PART_0.png)
+
 See slides for more details. 
 
     TODO:
