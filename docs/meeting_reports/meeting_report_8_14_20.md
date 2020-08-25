@@ -54,7 +54,8 @@ Total analysis time: ~6 hours per video x 11 videos * 3 mice = 198 hours of beha
 
 See slides for accompanying video. 
 
-    TODO: 
+    ### Single Event Analysis TODOs: 
+
     * quantify the number, proportion of these events over successive days. 
     * Streamline/improve accuracy of detection. Some small portion of events is still due to one animal being occluded, or poking head through holes in box (which Zahra/Ioana says is to feed.) 
     * Seem to be shorter in general than traditional shepherding events. Can we capture this difference statistically? 
@@ -68,7 +69,8 @@ See slides for accompanying video.
 
 See slides for more details. 
 
-    TODO:
+    ### Large Scale Analysis TODOs:
+
     * Check against manual scoring. Can we quantify successful vs. failed shepherding as a metric of dynamic interactions? 
     * Can we quantify the spatial distribution of these events? (Starts,stops,trajectories). 
         * Different Ethological Drives?
