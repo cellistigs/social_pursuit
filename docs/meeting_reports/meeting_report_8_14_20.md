@@ -76,7 +76,7 @@ See slides for more details.
     * Different Ethological Drives?
     * Territoriality?
 
-Overall TODOs:
+## Overall TODOs:
 * Validate filtered pursuit events against manual scoring to make sure we are counting correctly.
 * Validate virgin agonistic chasing against different metrics of aggression. Calculate differences between these events and shepherding. 
 * Distinguish successful and failed shepherding events as a time varying metric. 
@@ -84,7 +84,4 @@ Overall TODOs:
 
 
 
-
-* Large Scale Analysis: Quantification of pursuit events over longer time bins (~30 minutes - ~5.5 hours)
-    * Quantification of pursuit events over time: proportion dictated by one animal or another. I aggregated the pursuit events  
 
