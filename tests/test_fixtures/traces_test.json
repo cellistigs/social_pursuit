@@ -1,0 +1,15 @@
+{
+"trace_directory":"/Volumes/TOSHIBA EXT STO/RTTemp_Traces/test_dir",
+"traces_expected":[
+    {
+        "ExperimentName":"TempTrial2",
+        "VideoName":"TempTrial2_left.mpg",
+        "ConfigName":"TempTrial2config_test.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial16",
+        "VideoName":"TempTrial16_middle.mpg",
+        "ConfigName":"TempTrial16config_test.yaml"
+    }
+]
+}
