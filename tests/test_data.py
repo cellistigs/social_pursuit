@@ -3,6 +3,7 @@ import pytest
 import pathlib
 #from botocore.stub import Stubber
 from social_pursuit.data import PursuitTraces#PursuitVideo,PursuitTraces,s3_client,transfer_if_not_found
+import social_pursuit.data
 
 close_experiment = {"ExperimentName":"TempTrial2",
         "ROI":0,
@@ -16,10 +17,20 @@ far_experiment = {"ExperimentName":"TempTrial2",
         "Interval":[30081, 30093]# [68816, 68843]
         }
 
+clip_experiment = {"ExperimentName":"TempTrial2",
+        "ROI":0,
+        "PART":1,
+        "Interval":[1, 2]# [68816, 68843]
+        }
+
 test_fixture_template = pathlib.Path(".").resolve() / pathlib.Path("test_fixtures/traces_test.json")
 output_dir = pathlib.Path("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/tempdir")
 
 def test_PursuitTraces():
+    a = PursuitTraces(test_fixture_template)
+    assert list(a.experiments.keys()) == ["TempTrial2","TempTrial16"]
+
+def test_PursuitTraces_get_tracedicts():
     a = PursuitTraces(test_fixture_template)
     ## don't load everything, just first
     traces = a.get_tracedicts([close_experiment["ExperimentName"]])
@@ -176,11 +187,17 @@ def test_PursuitTraces_plot_aggregate_ends_mled(monkeypatch):
     a = PursuitTraces(test_fixture_template)
     a.plot_all_mother_ends_in_experiment(close_experiment["ExperimentName"],close_experiment["ROI"],"./here.png")
     
-def atest_PursuitTraces_make_clip():
+def test_PursuitTraces_make_clip_far(monkeypatch):
+    def mock_videowrite(self,name,codec,bitrate):
+        print(name)
+    monkeypatch.setattr(social_pursuit.data.VideoFileClip,"write_videofile",mock_videowrite)
     a = PursuitTraces(test_fixture_template)
     a.make_clip(close_experiment["ExperimentName"],close_experiment["ROI"],close_experiment["PART"],close_experiment["Interval"],"./")
-    assert 0
 
+#def test_PursuitTraces_make_clip_interval():
+#    a = PursuitTraces(test_fixture_template)
+#    a.make_clip(clip_experiment["ExperimentName"],clip_experiment["ROI"],clip_experiment["PART"],clip_experiment["Interval"],"./")
+#    assert 0
 #def test_transfer_if_not_found(s3_stub):
 #    s3_stub.add_response('download_file',expected_params = {"bucketname":"froemkecarcealabs.behaviordata","objname":"RT_Cohousing/Trial21.mpg","filename":""},service_response = {})
 #    filename = "s3://froemkecarcealabs.behaviordata/RT_Cohousing/Trial21.mpg"
