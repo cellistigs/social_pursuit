@@ -1,4 +1,5 @@
 # Test the data module
+import numpy as np
 import pytest
 import pathlib
 #from botocore.stub import Stubber
@@ -194,15 +195,28 @@ def test_PursuitTraces_make_clip_far(monkeypatch):
     a = PursuitTraces(test_fixture_template)
     a.make_clip(close_experiment["ExperimentName"],close_experiment["ROI"],close_experiment["PART"],close_experiment["Interval"],"./")
 
-#def test_PursuitTraces_make_clip_interval():
-#    a = PursuitTraces(test_fixture_template)
-#    a.make_clip(clip_experiment["ExperimentName"],clip_experiment["ROI"],clip_experiment["PART"],clip_experiment["Interval"],"./")
-#    assert 0
-#def test_transfer_if_not_found(s3_stub):
-#    s3_stub.add_response('download_file',expected_params = {"bucketname":"froemkecarcealabs.behaviordata","objname":"RT_Cohousing/Trial21.mpg","filename":""},service_response = {})
-#    filename = "s3://froemkecarcealabs.behaviordata/RT_Cohousing/Trial21.mpg"
-#    transfer_if_not_found(filename)
-#    assert 0
+def test_PursuitTraces_check_pursuit_parts_clear():
+    a = PursuitTraces(test_fixture_template)
+    parts = np.array([[0,0],[1,1],[1,1]])
+    indices = np.array([[10,20],[1,2],[4,10]])
+    nparts,nindices=a.check_pursuit_parts(parts,indices)
+    assert np.array_equal(nparts,parts)
+    assert np.array_equal(nindices,indices)
+    
+def test_PursuitTraces_check_pursuit_parts_fail():
+    a = PursuitTraces(test_fixture_template)
+    parts = np.array([[0,0],[0,1],[1,1],[1,2],[3,3]])
+    indices = np.array([[10,20],[71000,2],[4,10],[71999,1],[4,5]])
+    nparts,nindices=a.check_pursuit_parts(parts,indices)
+    print(nparts,nindices)
+    assert np.array_equal(nparts,np.array([[0,0],[0,0],[1,1],[1,1],[1,1],[2,2],[3,3]]))
+    assert np.array_equal(nindices,np.array([[10,20],[71000,a.trace_length_frames],[0,2],[4,10],[71999,a.trace_length_frames],[0,1],[4,5]]))
+    
+
+def test_PursuitTraces_process_groundtruth():
+    a = PursuitTraces(test_fixture_template)
+    a.process_groundtruth(close_experiment["ExperimentName"])
+    
 #
 #def test_load_spec():
 #    a = PursuitVideo("test_fixtures/template.json")
