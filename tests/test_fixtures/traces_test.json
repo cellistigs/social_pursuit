@@ -5,7 +5,7 @@
         "ExperimentName":"TempTrial2",
         "VideoName":"TempTrial2_left.mpg",
         "ConfigName":"TempTrial2config_test.yaml",
-        "GroundTruth":"Events co-housing dye pink trial 2 8.27.2019 ZA.xlsx"
+        "GroundTruth":"Events co-housing dye pink trial 2 8.27.2019 ZA TEST.xlsx"
     },
     {
         "ExperimentName":"TempTrial16",
