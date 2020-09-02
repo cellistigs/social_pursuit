@@ -1,4 +1,5 @@
 import json 
+import re
 import os
 import yaml
 from datetime import datetime
@@ -289,6 +290,38 @@ class PursuitTraces(object):
                 part_fullpath = os.path.join(roi_fullpath,part_dir)
                 mkdir_notexists(part_fullpath)
                 self.get_pursuit_traceset(edict,r,p,part_fullpath)
+    
+    def get_intervaldict(self,dataset,interval,r,p,experimentname):
+        """Helper function to get the actual trajectory information given a dataset and relevant specification info. 
+
+        :param dataset: dataset dictionary containing the whole 40 minute trace. 
+        :param interval: interval to extract.
+        :param r: roi
+        :param p: part of the video. 
+        :param experimentname: name of the experiment we are extracting. 
+
+        """
+        intervaldict = {}
+        indexslice = slice(*interval)
+
+        mtraj = dataset["dam_centroid_traj"][indexslice,:]
+        vtraj = dataset["virgin_centroid_traj"][indexslice,:]
+        mtip = dataset["dam_tip_traj"][indexslice,:]
+        vtip = dataset["virgin_tip_traj"][indexslice,:]
+        pursuit_direction = dataset["pursuit_direction"][:,indexslice]
+        pursuit_direction_agg = np.sign(np.sum(pursuit_direction))
+
+        intervaldict["ExperimentName"] = experimentname
+        intervaldict["ROI"] = r
+        intervaldict["VideoPart"] = p
+        intervaldict["Interval"] = interval
+        intervaldict["mtraj"] = mtraj
+        intervaldict["vtraj"] = vtraj
+        intervaldict["mtip"] = mtip
+        intervaldict["vtip"] = vtip
+        intervaldict["pursuit_direction"] = pursuit_direction
+        intervaldict["pursuit_direction_agg"] = pursuit_direction_agg
+        return intervaldict,pursuit_direction_agg
 
     def get_pursuit_traceset(self,edict,r,p,part_fullpath):
         """Function to extract all pursuit events in a single trace set. 
@@ -310,27 +343,28 @@ class PursuitTraces(object):
             ## Now get relevant data in these indices: 
             
             for interval in intervals:
-                intervaldict = {}
-                indexslice = slice(*interval)
+                intervaldict,pdir = self.get_intervaldict(dataset,interval,r,p,experimentname=edict["ExperimentName"]) 
+                #intervaldict = {}
+                #indexslice = slice(*interval)
 
-                mtraj = dataset["dam_centroid_traj"][indexslice,:]
-                vtraj = dataset["virgin_centroid_traj"][indexslice,:]
-                mtip = dataset["dam_tip_traj"][indexslice,:]
-                vtip = dataset["virgin_tip_traj"][indexslice,:]
-                pursuit_direction = dataset["pursuit_direction"][:,indexslice]
-                pursuit_direction_agg = np.sign(np.sum(pursuit_direction))
+                #mtraj = dataset["dam_centroid_traj"][indexslice,:]
+                #vtraj = dataset["virgin_centroid_traj"][indexslice,:]
+                #mtip = dataset["dam_tip_traj"][indexslice,:]
+                #vtip = dataset["virgin_tip_traj"][indexslice,:]
+                #pursuit_direction = dataset["pursuit_direction"][:,indexslice]
+                #pursuit_direction_agg = np.sign(np.sum(pursuit_direction))
 
-                intervaldict["ExperimentName"] = edict["ExperimentName"]
-                intervaldict["ROI"] = r
-                intervaldict["VideoPart"] = p
-                intervaldict["Interval"] = interval
-                intervaldict["mtraj"] = mtraj
-                intervaldict["vtraj"] = vtraj
-                intervaldict["mtip"] = mtip
-                intervaldict["vtip"] = vtip
-                intervaldict["pursuit_direction"] = pursuit_direction
-                intervaldict["pursuit_direction_agg"] = pursuit_direction_agg
-                dict_name = "Pursuit{I}_Direction{P}.npy".format(I = interval,P = pursuit_direction_agg)
+                #intervaldict["ExperimentName"] = edict["ExperimentName"]
+                #intervaldict["ROI"] = r
+                #intervaldict["VideoPart"] = p
+                #intervaldict["Interval"] = interval
+                #intervaldict["mtraj"] = mtraj
+                #intervaldict["vtraj"] = vtraj
+                #intervaldict["mtip"] = mtip
+                #intervaldict["vtip"] = vtip
+                #intervaldict["pursuit_direction"] = pursuit_direction
+                #intervaldict["pursuit_direction_agg"] = pursuit_direction_agg
+                dict_name = "Pursuit{I}_Direction{P}.npy".format(I = interval,P = pdir)
 
                 np.save(os.path.join(part_fullpath,dict_name),intervaldict)
 
@@ -640,7 +674,7 @@ class PursuitTraces(object):
                 ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
 
     def plot_all_trajectories_in_traceset(self,experimentname,r,p,filtername = None,plotpath = None):
-        """ Plot all trajectories in the same interval into a single frame.
+        """ Plot all trajectories in the same traceset into a single frame.
 
         """
         if filtername is None:
@@ -659,7 +693,7 @@ class PursuitTraces(object):
         self.plot_trajectories_from_filenames(experimentname,r,p,all_pursuits,plotpath)
 
     def plot_vled_trajectories_in_traceset(self,experimentname,r,p,filtername = None,plotpath = None):
-        """ Plot all trajectories in the same interval into a single frame.
+        """ Plot all trajectories in the same traceset into a single frame.
 
         """
         if filtername is None:
@@ -678,7 +712,7 @@ class PursuitTraces(object):
         self.plot_trajectories_from_filenames(experimentname,r,p,all_pursuits,plotpath,self.__plot_vled_internal)
 
     def plot_mled_trajectories_in_traceset(self,experimentname,r,p,filtername = None,plotpath = None):
-        """ Plot all trajectories in the same interval into a single frame.
+        """ Plot all trajectories in the same traceset into a single frame.
 
         """
         if filtername is None:
@@ -971,7 +1005,6 @@ class PursuitTraces(object):
         cutout = cropped.subclip(t_start = interval_secs[0],t_end=interval_secs[1])
         cutout.write_videofile(os.path.join(plotpath,experimentname+"ROI_{}".format(r)+"PART_{}".format(p)+"Interval_{}".format(interval)+'.mp4'),codec= 'mpeg4',bitrate = '1000k')
 
-    
     def split_crossing_part(self,part,index):
         """Given a pair (part,index) array of shape (2,) that has been identified as problematic, splits them into arrays of shape (2,2) that correspond to a splitting of the indicated interval event over parts. 
 
@@ -983,8 +1016,6 @@ class PursuitTraces(object):
         indexarray_split = np.array([[index[0],self.trace_length_frames],[0,index[1]]])
         return partarray_split,indexarray_split
         
-
-
     def check_pursuit_parts(self,part,index):
         """Given the video parts (video segmentation) and frame indices for each pursuit event, checks that pursuits do not cross segmentation boundaries. 
         If they do, resolves them into two pursuit events that respect those segmentation boundaries.
@@ -1014,19 +1045,174 @@ class PursuitTraces(object):
         gtdataname = pathlib.Path(self.experiments[experimentname]["GroundTruth"])
         gtdatafullpath = self.path / gtdataname
         excel = pd.read_excel(gtdatafullpath)
-        pursuit_ind = ["Virgin","Dam"]
-        cage = [1,2,3]
+        ## Dictionary to index into the actual datasets that we care about.  
+        pursuit_dict = {"Virgin":1,"Dam":-1}
+        cage_dict = {1:0,2:1,3:2}
         index_template = "C{c} {p} Sh"
-        for pi in pursuit_ind:
-            for c in cage:
+        for pi in pursuit_dict:
+            for c in cage_dict:
                 name = index_template.format(c = c, p = pi)
                 dataset = excel.loc[excel["Behavior"] == name]
                 dataset_frames = dataset[["Start (s)","Stop (s)"]]*30
                 part,index = np.divmod(dataset_frames.values,self.trace_length_frames)
                 filteredpart,filteredindex = self.check_pursuit_parts(part,index)
-                print(filteredpart,filteredindex)
-        assert 0
+
+                ## Get dataset indexing params. 
+                r = cage_dict[c]
+                for i in range(filteredpart.shape[0]):
+                    p = int(filteredpart[i,0])
+                    filtered_dir =  self.get_trace_filter_dir(experimentname,r,p,"groundtruth")
+                    mkdir_notexists(filtered_dir)
+                    interval = filteredindex[i,:].astype(int)
+                    tracename = "{e}roi_{r}cropped_part{p}".format(e=experimentname,r=r,p=p)+self.trace_suffix
+                    dataset = loadmat(os.path.join(self.path,tracename))
+                    intervaldict,pdir_proposed = self.get_intervaldict(dataset,interval,r,p,experimentname)
+                    dict_name = "Pursuit{I}_Direction{P}.npy".format(I = interval,P = pdir_proposed)
+                    full_path_to_data = os.path.join(filtered_dir,dict_name)
+                    np.save(full_path_to_data,intervaldict)
+
+    def extract_interval(self,string):
+        """Function to extract the interval and pursuit direction from a string representing the name of a file. 
+
+        """
+        numbers = re.findall(r"[-+]?\d*\.\d+|\d+",string)
+        assert len(numbers) == 3, "must have two entries for the interval and one for the direction."
+        return {"interval":[int(numbers[0]),int(numbers[1])], "direction":float(numbers[2])}
+
+    def calculate_statistics_eventwise(self,compareimage,all_pursuits,buf = 5):
+        """Calculate eventwise statistics on our dataset. 
+
+        :param compareimage: numpy array to use to calculate these statistics. 
+        :param all_pursuits: a list of two lists, each containing dictionaries with information about relevant pursuit events. 
+        :param buf: an integer providing a frame buffer which we will use when considering if events overlap or not. 
+
+        :return: returns a dictionary indicating the events in A that were detected by B and vice versa. 
+        """
+        assert compareimage.shape[0] == 2
+        assert len(all_pursuits) == 2
+        output = {"A_detectedby_B":[],"B_detectedby_A":[]}
+        index = ["A_detectedby_B","B_detectedby_A"]
+        for ti,pursuitstype in enumerate(all_pursuits):
+            otherind = 1-ti
+            for event in pursuitstype:
+                interval = np.array(event["interval"])
+                bufinterval = np.array([-buf,buf])+interval
+
+                other = compareimage[otherind,slice(*bufinterval)]
+                cond = np.any(other)
+                output[index[ti]].append(cond)
+        return output
+
+    def calculate_statistics_durationwise(self,compareimage,all_pursuits):
+        """Calculate durationwise statistics on our dataset. 
+
+        :param compareimage: numpy array to use to calculate these statistics. 
+        :param all_pursuits: a list of two lists, each containing dictionaries with information about relevant pursuit events. 
+
+        :return: returns a dictionary indicating the proportion of each event in A that was detected by B and vice versa. 
+        """
+        assert compareimage.shape[0] == 2
+        assert len(all_pursuits) == 2
+        output = {"A_proportionin_B":[],"B_proportionin_A":[]}
+        index = ["A_proportionin_B","B_proportionin_A"]
+        for ti,pursuitstype in enumerate(all_pursuits):
+            otherind = 1-ti
+            for event in pursuitstype:
+                interval = np.array(event["interval"])
+
+                other = compareimage[otherind,slice(*interval)]
+                prop = np.sum(abs(other))/len(other)
+                output[index[ti]].append(prop)
+        return output
                 
+    def calculate_statistics_directional(self,compareimage,all_pursuits,buf = 5):
+        """Calculate durationwise statistics on our dataset. 
+
+        :param compareimage: numpy array to use to calculate these statistics. 
+        :param all_pursuits: a list of two lists, each containing dictionaries with information about relevant pursuit events. 
+        :param buf: an integer providing a frame buffer which we will use when considering if events overlap or not. 
+
+        :return: returns a dictionary indicating the proportion of each event in A that was detected by B and vice versa. 
+        """
+        assert compareimage.shape[0] == 2
+        assert len(all_pursuits) == 2
+        output = {"A_directiongiven_B":[],"B_directiongiven_A":[]}
+        index = ["A_directiongiven_B","B_directiongiven_A"]
+        for ti,pursuitstype in enumerate(all_pursuits):
+            otherind = 1-ti
+            for event in pursuitstype:
+                interval = np.array(event["interval"])
+                direction = event["direction"]
+                bufinterval = np.array([-buf,buf])+interval
+
+                other = compareimage[otherind,slice(*bufinterval)]
+                ## Round in favor of correct if the inferred direction is exactly balanced. 
+                inferreddirection = np.sign(np.sum(other)+0.1*direction).astype(int)
+                dirs = {"ref":direction,"targ":inferreddirection}
+                output[index[ti]].append(dirs)
+        return output
+
+
+    def calculate_statistics(self,compareimage,all_pursuits):
+        """Calculate event wise, duration wise, and direction classification statistics on our dataset. 
+        
+        :param compareimage: numpy array to use to calculate these statistics. 
+        :param all_pursuits: a list of two lists, each containing dictionaries with information about relevant pursuit events. 
+        """
+        ## Calculate eventwise stats:
+        outevent = self.calculate_statistics_eventwise(compareimage,all_pursuits)
+        outduration =self.calculate_statistics_durationwise(compareimage,all_pursuits)
+        outdirection = self.calculate_statistics_directional(compareimage,all_pursuits)
+
+
+
+    def compare_pursuits(self,experimentname,r,p,filternames,plotpath = None):
+        """Look at two different sets of pursuit events, and compare them. Generate a table that compares the two, as well as a a plot (optional).   
+
+        :param experimentname: the name of the experiment for which we will retrieve pursuits. 
+        :param r: the integer giving the roi index we will look at. 
+        :param p: the integer giving the video part we will look at. 
+        :param filternames: a list with two elements, describing the names of the two filters we will compare. If it contains only one element, will compare against groundtruth. 
+        :param plotpath: path to which we will plot and save out the result. 
+        """
+
+        ## Get the name of the directories that we should search for:
+        assert type(filternames) == list, "filternames must be passed as list."
+        if len(filternames) == 1:
+            dirnames = [self.get_trace_dir(experimentname,r,p),self.get_trace_filter_dir(experimentname,r,p,filternames[0])]
+            filternames_fixed = ["raw",filternames[0]]
+        elif len(filternames) == 2:
+            dirnames = [self.get_trace_filter_dir(experimentname,r,p,filtername) for filtername in filternames]
+            filternames_fixed = filternames
+        else:
+            raise Exception("filternames must be a list of length 1 or 2")
+
+        ## First get the names and detected pursuit leaders for each interval in both sets of pursuit events. 
+        all_pursuits = []
+        compareimage = np.zeros((2,self.trace_length_frames))
+        for n,name in enumerate(dirnames):
+            pursuits = list(pathlib.Path(name).glob("*.npy"))
+            if len(pursuits) > 0: 
+                pursuitnames = [p.stem for p in pursuits]
+                pursuitnumbers = [self.extract_interval(pn) for pn in pursuitnames]
+                all_pursuits.append(pursuitnumbers)
+                for pn in pursuitnumbers:
+                    interval = pn["interval"]
+                    direction = pn["direction"]
+                    print(interval)
+                    compareimage[n,slice(*interval)] = direction
+
+            else:
+                raise FileNotFoundError("filter results not yet generated for filtername {}.".format(name)) 
+        if plotpath:
+            plt.imshow(compareimage,aspect = 10000)
+            plt.axhline(0.5,color = "black")
+            plt.title("Ethogram Comparison: Experiment {}, ROI {}, Part {}; Top: {} Bottom: {}".format(experimentname,r,p,*filternames_fixed))
+            plt.show()
+
+
+            
+            
 
         
 

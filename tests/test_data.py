@@ -217,7 +217,60 @@ def test_PursuitTraces_process_groundtruth():
     a = PursuitTraces(test_fixture_template)
     a.process_groundtruth(close_experiment["ExperimentName"])
     
-#
+def test_PursuitTraces_plot_groundtruth():
+    a = PursuitTraces(test_fixture_template)
+    a.plot_trajectories_traceset(close_experiment["ExperimentName"],1,close_experiment["PART"],filtername = "groundtruth")
+
+def test_PursuitTraces_compare_pursuits_raw():
+    a = PursuitTraces(test_fixture_template)
+    a.compare_pursuits(close_experiment["ExperimentName"],1,close_experiment["PART"],filternames = ["groundtruth"],plotpath = "somepath")
+
+def test_PursuitTraces_compare_pursuits():
+    a = PursuitTraces(test_fixture_template)
+    with pytest.raises(FileNotFoundError):
+        a.compare_pursuits(close_experiment["ExperimentName"],1,close_experiment["PART"],filternames = ["groundtruth","examplefilter"])
+
+def test_PursuitTraces_calculate_statistics_eventwise():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,1,1],[0,0,0,0,1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":1}],[{"interval":[4,5],"direction":1}]]
+    output = a.calculate_statistics_eventwise(compareimage,all_pursuits,buf = 0)
+    assert output == {"A_detectedby_B":[False,True],"B_detectedby_A":[True]}
+    
+def test_PursuitTraces_calculate_statistics_eventwise_buf():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,1,1],[0,0,0,0,1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":1}],[{"interval":[4,5],"direction":1}]]
+    output = a.calculate_statistics_eventwise(compareimage,all_pursuits,buf = 3)
+    assert output == {"A_detectedby_B":[True,True],"B_detectedby_A":[True]}
+
+def test_PursuitTraces_calculate_statistics_durationwise():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,1,1],[0,0,0,0,1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":1}],[{"interval":[4,5],"direction":1}]]
+    output = a.calculate_statistics_durationwise(compareimage,all_pursuits)
+    assert output == {"A_proportionin_B":[0.0,0.5],"B_proportionin_A":[1.0]}
+
+def test_PursuitTraces_calculate_statistics_directional():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,1,1],[0,0,0,0,1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":1}],[{"interval":[4,5],"direction":1}]]
+    output = a.calculate_statistics_directional(compareimage,all_pursuits,buf = 0)
+    assert output == {"A_directiongiven_B":[{"ref":1,"targ":0},{"ref":1,"targ":1}],"B_directiongiven_A":[{"ref":1,"targ":1}]}
+
+def test_PursuitTraces_calculate_statistics_directional_diffdirection():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,1,1],[0,0,0,0,-1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":1}],[{"interval":[4,5],"direction":-1}]]
+    output = a.calculate_statistics_directional(compareimage,all_pursuits,buf = 0)
+    assert output == {"A_directiongiven_B":[{"ref":1,"targ":0},{"ref":1,"targ":-1}],"B_directiongiven_A":[{"ref":-1,"targ":1}]}
+
+def test_PursuitTraces_calculate_statistics_directional_rounddirection():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,-1,-1],[0,0,0,0,-1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":-1}],[{"interval":[4,5],"direction":-1}]]
+    output = a.calculate_statistics_directional(compareimage,all_pursuits,buf = 3)
+    assert output == {"A_directiongiven_B":[{"ref":1,"targ":-1},{"ref":-1,"targ":-1}],"B_directiongiven_A":[{"ref":-1,"targ":-1}]}
 #def test_load_spec():
 #    a = PursuitVideo("test_fixtures/template.json")
 #
