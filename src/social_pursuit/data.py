@@ -1,4 +1,5 @@
 import json 
+import pprint
 import re
 import os
 import yaml
@@ -11,8 +12,9 @@ from shutil import copyfile
 from moviepy.editor import VideoFileClip
 import pandas as pd
 import pathlib
-#import boto3
-#from botocore.exceptions import ClientError
+
+damcolor = "#af8dc3"
+virgincolor = "#7fbf7b"
 
 #s3_client = boto3.client("s3")
 
@@ -476,7 +478,7 @@ class PursuitTraces(object):
             for p in range(parts):
                 self.plot_trajectories_traceset(experimentname,r,p,filtername)
 
-    def plot_trajectory_from_data(self,experimentname,r,p,data,plotpath):
+    def plot_trajectory_from_data(self,experimentname,r,p,data,plotpath,plotfunc = None):
         """Plots a trajectory set from given data.   
 
         """
@@ -504,13 +506,13 @@ class PursuitTraces(object):
 
         ax.add_patch(nest)
 
-        plt.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red",label="dam")
-        plt.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue",label="virgin")
-        plt.plot(mtraj[0,0],mtraj[0,1],"ro")
-        plt.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-        plt.plot(vtraj[0,0],vtraj[0,1],"bo")
-        plt.plot(vtraj[-1,0],vtraj[-1,1],"bx")
-        plt.legend()
+        if plotfunc is None:
+            self.__plot_func_internal(data,fig,ax,0)
+        else: 
+            plotfunc(data,fig,ax,f)
+        plt.legend(fontsize = "xx-large",markerscale = 10)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
         plt.savefig(plotpath)
         plt.close()
 
@@ -541,7 +543,10 @@ class PursuitTraces(object):
                 self.__plot_func_internal(data,fig,ax,f)
             else: 
                 plotfunc(data,fig,ax,f)
-        plt.legend()
+        plt.legend(fontsize = "xx-large",markerscale = 10)
+        ax = plt.gca()
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
         plt.savefig(plotpath)
         plt.close()
 
@@ -550,15 +555,15 @@ class PursuitTraces(object):
         mtraj = data["mtraj"]
         vtraj = data["vtraj"]
         if it == 0:
-            ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red",label="dam")
-            ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue",label="virgin")
+            ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = damcolor,label="dam")
+            ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = virgincolor,label="virgin")
         else:
-            ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red")
-            ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue")
-        ax.plot(mtraj[0,0],mtraj[0,1],"ro")
-        ax.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-        ax.plot(vtraj[0,0],vtraj[0,1],"bo")
-        ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
+            ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = damcolor)
+            ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = virgincolor)
+        ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+        ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+        ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
+        ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
 
     def __plot_mled_internal(self,data,fig,ax,it):
         ## Get individual trajectories
@@ -566,15 +571,15 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == -1:
             if it == 0:
-                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red",label="dam")
-                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue",label="virgin")
+                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = damcolor,label="dam")
+                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = virgincolor,label="virgin")
             else:
-                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red")
-                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue")
-            ax.plot(mtraj[0,0],mtraj[0,1],"ro")
-            ax.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-            ax.plot(vtraj[0,0],vtraj[0,1],"bo")
-            ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
+                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = damcolor)
+                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = virgincolor)
+            ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+            ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+            ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
+            ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
         else:
             pass
 
@@ -584,15 +589,15 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == 1:
             if it == 0:
-                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red",label="dam")
-                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue",label="virgin")
+                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = damcolor,label="dam")
+                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = virgincolor,label="virgin")
             else:
-                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "red")
-                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 0.5,linestyle = "None",color = "blue")
-            ax.plot(mtraj[0,0],mtraj[0,1],"ro")
-            ax.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-            ax.plot(vtraj[0,0],vtraj[0,1],"bo")
-            ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
+                ax.plot(mtraj[:,0],mtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = damcolor)
+                ax.plot(vtraj[:,0],vtraj[:,1],marker = "o",markersize = 1,linestyle = "None",color = virgincolor)
+            ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+            ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+            ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
+            ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
         else:
             pass
 
@@ -602,22 +607,22 @@ class PursuitTraces(object):
         mtraj = data["mtraj"]
         vtraj = data["vtraj"]
         if it == 0:
-            ax.plot(mtraj[0,0],mtraj[0,1],"ro",label = "dam")
-            ax.plot(vtraj[0,0],vtraj[0,1],"bo",label = "virgin")
+            ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
+            ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
         else:
-            ax.plot(mtraj[0,0],mtraj[0,1],"ro")
-            ax.plot(vtraj[0,0],vtraj[0,1],"bo")
+            ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+            ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
 
     def __plot_ends_internal(self,data,fig,ax,it):
         ## Get individual trajectories
         mtraj = data["mtraj"]
         vtraj = data["vtraj"]
         if it == 0:
-            ax.plot(mtraj[-1,0],mtraj[-1,1],"rx",label = "dam")
-            ax.plot(vtraj[-1,0],vtraj[-1,1],"bx",label = "virgin")
+            ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor,label = "dam")
+            ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor,label = "virgin")
         else:
-            ax.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-            ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
+            ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+            ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
 
     def __plot_starts_vled_internal(self,data,fig,ax,it):
         ## Get individual trajectories
@@ -625,11 +630,11 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == 1:
             if it == 0:
-                ax.plot(mtraj[0,0],mtraj[0,1],"ro",label = "dam")
-                ax.plot(vtraj[0,0],vtraj[0,1],"bo",label = "virgin")
+                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
+                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
             else:
-                ax.plot(mtraj[0,0],mtraj[0,1],"ro")
-                ax.plot(vtraj[0,0],vtraj[0,1],"bo")
+                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
         else:
             pass
 
@@ -639,11 +644,11 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == 1:
             if it == 0:
-                ax.plot(mtraj[-1,0],mtraj[-1,1],"rx",label = "dam")
-                ax.plot(vtraj[-1,0],vtraj[-1,1],"bx",label = "virgin")
+                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor,label = "dam")
+                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor,label = "virgin")
             else:
-                ax.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-                ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
+                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
         else:
             pass
 
@@ -653,11 +658,11 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == -1:
             if it == 0:
-                ax.plot(mtraj[0,0],mtraj[0,1],"ro",label = "dam")
-                ax.plot(vtraj[0,0],vtraj[0,1],"bo",label = "virgin")
+                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
+                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
             else:
-                ax.plot(mtraj[0,0],mtraj[0,1],"ro")
-                ax.plot(vtraj[0,0],vtraj[0,1],"bo")
+                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
         else:
             pass
 
@@ -667,11 +672,11 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == -1:
             if it == 0:
-                ax.plot(mtraj[-1,0],mtraj[-1,1],"rx",label = "dam")
-                ax.plot(vtraj[-1,0],vtraj[-1,1],"bx",label = "virgin")
+                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor,label = "dam")
+                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor,label = "virgin")
             else:
-                ax.plot(mtraj[-1,0],mtraj[-1,1],"rx")
-                ax.plot(vtraj[-1,0],vtraj[-1,1],"bx")
+                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
 
     def plot_all_trajectories_in_traceset(self,experimentname,r,p,filtername = None,plotpath = None):
         """ Plot all trajectories in the same traceset into a single frame.
@@ -858,6 +863,17 @@ class PursuitTraces(object):
 
     def get_trace_filter_dir(self,experimentname,r,p,filtername):
         tracedirectory = os.path.join(self.path,"{}_Pursuit_Events".format(experimentname),"FILTER_{f}".format(f=filtername),"ROI_{}".format(r),"PART_{}".format(p))
+        return tracedirectory
+
+    def get_trace_filter_compare_dir(self,experimentname,r,p,filternames):
+        assert type(filternames) == list, "filternames must be passed as list."
+        if len(filternames) == 1:
+            filternames_fixed = ["raw",filternames[0]]
+        elif len(filternames) == 2:
+            filternames_fixed = filternames
+        else:
+            raise Exception("filternames must be a list of length 1 or 2")
+        tracedirectory = os.path.join(self.path,"{}_Pursuit_Events".format(experimentname),"FILTER_A_{}_FILTER_B_{}".format(*filternames_fixed),"ROI_{}".format(r),"PART_{}".format(p))
         return tracedirectory
 
     def get_pursuit_eventname(self,tracedirectory,interval):
@@ -1099,7 +1115,7 @@ class PursuitTraces(object):
                 bufinterval = np.array([-buf,buf])+interval
 
                 other = compareimage[otherind,slice(*bufinterval)]
-                cond = np.any(other)
+                cond = bool(np.any(other))
                 output[index[ti]].append(cond)
         return output
 
@@ -1147,26 +1163,33 @@ class PursuitTraces(object):
 
                 other = compareimage[otherind,slice(*bufinterval)]
                 ## Round in favor of correct if the inferred direction is exactly balanced. 
-                inferreddirection = np.sign(np.sum(other)+0.1*direction).astype(int)
+                if np.any(other):
+                    inferreddirection = int(np.sign(np.sum(other)+0.1*direction))
+                else:
+                    inferreddirection = 0.0
                 dirs = {"ref":direction,"targ":inferreddirection}
                 output[index[ti]].append(dirs)
         return output
 
 
-    def calculate_statistics(self,compareimage,all_pursuits):
+    def calculate_statistics(self,compareimage,all_pursuits,buf = 5):
         """Calculate event wise, duration wise, and direction classification statistics on our dataset. 
         
         :param compareimage: numpy array to use to calculate these statistics. 
         :param all_pursuits: a list of two lists, each containing dictionaries with information about relevant pursuit events. 
         """
         ## Calculate eventwise stats:
-        outevent = self.calculate_statistics_eventwise(compareimage,all_pursuits)
+        all_statistics = {}
+        outevent = self.calculate_statistics_eventwise(compareimage,all_pursuits,buf = buf)
+        all_statistics["eventwise"] = outevent
         outduration =self.calculate_statistics_durationwise(compareimage,all_pursuits)
-        outdirection = self.calculate_statistics_directional(compareimage,all_pursuits)
+        all_statistics["durationwise"] = outduration
+        outdirection = self.calculate_statistics_directional(compareimage,all_pursuits,buf = buf)
+        all_statistics["directional"] = outdirection
+        return all_statistics
 
 
-
-    def compare_pursuits(self,experimentname,r,p,filternames,plotpath = None):
+    def compare_pursuits_traceset(self,experimentname,r,p,filternames,plotpath = None,buf = 5):
         """Look at two different sets of pursuit events, and compare them. Generate a table that compares the two, as well as a a plot (optional).   
 
         :param experimentname: the name of the experiment for which we will retrieve pursuits. 
@@ -1199,20 +1222,94 @@ class PursuitTraces(object):
                 for pn in pursuitnumbers:
                     interval = pn["interval"]
                     direction = pn["direction"]
-                    print(interval)
                     compareimage[n,slice(*interval)] = direction
-
             else:
-                raise FileNotFoundError("filter results not yet generated for filtername {}.".format(name)) 
+                print("filter results not yet generated for filtername {}. ".format(name)) 
+                return
+
         if plotpath:
             plt.imshow(compareimage,aspect = 10000)
             plt.axhline(0.5,color = "black")
             plt.title("Ethogram Comparison: Experiment {}, ROI {}, Part {}; Top: {} Bottom: {}".format(experimentname,r,p,*filternames_fixed))
-            plt.show()
+            plt.savefig(plotpath)
+        else:
+            pass
+
+        output = self.calculate_statistics(compareimage,all_pursuits,buf = buf)
+
+        comparedir = self.get_trace_filter_compare_dir(experimentname,r,p,filternames)
+        mkdir_notexists(comparedir)
+
+        ## Save everything:
+        with open(os.path.join(comparedir,"Comparison_Statistics.json"),"w") as f:
+            json.dump(output,f,indent = 4)
+        with open(os.path.join(comparedir,"Comparison_Pursuitwise.json"),"w") as f:
+            json.dump(all_pursuits,f,indent = 4)
+        np.save(os.path.join(comparedir,"Comparison_Framewise"),compareimage)
+
+    def compare_pursuits(self,experimentname,filternames):
+        """Compares all pursuits across an experiment within two filters. 
+
+        :param experimentname: The name of the experiment within this dataset's metadata that we are analyzing. 
+        :param filternames: The names of the filters that we will be comparing against. 
+        """
+        ## Vet input
+        assert type(experimentname) is str,"experiment name must be string."
+        try:
+            edict = self.experiments[experimentname]
+        except KeyError:
+            print("specified experiment name does not exist or was not cleared for analysis.")
+            raise
+        assert type(filternames) is list,"you must provide a list of 1 or two filters to compare between"
+        ## Now get total number of rois and parts:
+        parts = edict["nb_trace_sets"]
+        rois = self.__get_box_indices(edict["config"])
+        for r in rois:
+            for p in range(parts):
+                self.compare_pursuits_traceset(experimentname,r,p,filternames)
+
+    def retrieve_groundtruth_statistics(self,experimentname,filternames):
+        """Assuming one has calculated pursuit comparisons between a pair of filters, computes the statistics across the whole experiment (all included boxes.) 
+
+        :param experimentname: The name of the experiment within this dataset's metadata that we are analyzing.  
+        :param filternames: The names of the filters that we will be comapring against.
+        """
+        assert type(experimentname) is str,"experiment name must be string."
+        try:
+            edict = self.experiments[experimentname]
+        except KeyError:
+            print("specified experiment name does not exist or was not cleared for analysis.")
+            raise
+        assert type(filternames) is list,"you must provide a list of 1 or two filters to compare between"
+        ## Now get total number of rois and parts:
+        parts = edict["nb_trace_sets"]
+        rois = self.__get_box_indices(edict["config"])
+        results = {}
+        results["experimentname"] = experimentname
+        results["filternames"] = filternames
+        for r in rois:
+            results[r] = {}
+            for p in range(parts):
+                directoryname = self.get_trace_filter_compare_dir(experimentname,r,p,filternames)
+                if os.path.exists(directoryname):
+                    with open(os.path.join(directoryname,"Comparison_Statistics.json"),"r") as f:
+                        compinfo = json.load(f)
+                    eventwise_stats = compinfo["eventwise"]
+                    durationwise_stats = compinfo["durationwise"]
+                    directionwise_stats = compinfo["directional"]
+                    true_detect_percentage = np.array(eventwise_stats["B_detectedby_A"]).astype(int)
+                    false_detect_percentage = np.array(eventwise_stats["A_detectedby_B"]).astype(int)
+                    td = np.sum(true_detect_percentage)/len(true_detect_percentage)
+                    fd = (len(false_detect_percentage)-np.sum(false_detect_percentage))/len(false_detect_percentage)
+                    results[r][p] = {"true_detect":td,"false_detect":fd}
+                else:
+                    print("ground truth does not exist.")
+        return results
 
 
-            
-            
+
+
+
 
         
 
@@ -1283,7 +1380,6 @@ class PursuitVideo(object):
 
     def write_frame_s3(self,path,timestamp):
         pass
-
 
 
 
