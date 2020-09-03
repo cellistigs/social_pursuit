@@ -4,7 +4,7 @@
     {
         "ExperimentName":"TempTrial2",
         "VideoName":"TempTrial2_left.mpg",
-        "ConfigName":"TempTrial2config.yaml"
+        "ConfigName":"TempTrial2config.yaml",
         "GroundTruth":"Events co-housing dye pink trial 2 8.27.2019 ZA.xlsx"
     },
     {
@@ -15,25 +15,25 @@
     {
         "ExperimentName":"TempTrial7",
         "VideoName":"TempTrial7_middle.mpg",
-        "ConfigName":"TempTrial7config.yaml"
+        "ConfigName":"TempTrial7config.yaml",
         "GroundTruth":"Events co-housing dye pink trial 7 9.19.2019 ZA.xlsx"
     },
     {
         "ExperimentName":"TempTrial8",
         "VideoName":"TempTrial8_right.mpg",
-        "ConfigName":"TempTrial8config.yaml"
+        "ConfigName":"TempTrial8config.yaml",
         "GroundTruth":"Events co-housing dye pink trial 8 9.20.2019 ZA.xlsx"
     },
     {
         "ExperimentName":"TempTrial9",
         "VideoName":"TempTrial9_left.mpg",
-        "ConfigName":"TempTrial9config.yaml"
+        "ConfigName":"TempTrial9config.yaml",
         "GroundTruth":"Events co-housing dye pink trial 9 9.21.2019 ZA.xlsx"
     },
     {
         "ExperimentName":"TempTrial10",
         "VideoName":"TempTrial10_middle.mpg",
-        "ConfigName":"TempTrial10config.yaml"
+        "ConfigName":"TempTrial10config.yaml",
         "GroundTruth":"Events co-housing dye pink trial 10 9.30.2019 ZA.xlsx"
     },
     {
