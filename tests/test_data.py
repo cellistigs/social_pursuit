@@ -123,7 +123,6 @@ def test_PursuitTraces_filter_pursuits_traceset():
     edict = a.experiments[far_experiment["ExperimentName"]]
     thresh10 = lambda data: a.filter_velocity(10,data)
     a.filter_pursuit_traceset(edict,far_experiment["ROI"],far_experiment["PART"],thresh10,"examplefilter")
-
     
 def test_PursuitTraces_plot_aggregate(monkeypatch):
     def mock(experimentname,r,p,all_pursuits,plotpath,plot_starts_internal):
@@ -221,14 +220,14 @@ def test_PursuitTraces_plot_groundtruth():
     a = PursuitTraces(test_fixture_template)
     a.plot_trajectories_traceset(close_experiment["ExperimentName"],1,close_experiment["PART"],filtername = "groundtruth")
 
-def test_PursuitTraces_compare_pursuits_raw():
+def test_PursuitTraces_compare_pursuits_traceset_raw():
     a = PursuitTraces(test_fixture_template)
-    a.compare_pursuits(close_experiment["ExperimentName"],1,close_experiment["PART"],filternames = ["groundtruth"],plotpath = "somepath")
+    a.compare_pursuits_traceset(close_experiment["ExperimentName"],1,close_experiment["PART"],filternames = ["groundtruth"],plotpath = "somepath")
 
-def test_PursuitTraces_compare_pursuits():
+def test_PursuitTraces_compare_pursuits_traceset():
     a = PursuitTraces(test_fixture_template)
-    with pytest.raises(FileNotFoundError):
-        a.compare_pursuits(close_experiment["ExperimentName"],1,close_experiment["PART"],filternames = ["groundtruth","examplefilter"])
+    out = a.compare_pursuits_traceset(close_experiment["ExperimentName"],1,close_experiment["PART"],filternames = ["groundtruth","examplefilter"])
+    assert out is None
 
 def test_PursuitTraces_calculate_statistics_eventwise():
     a = PursuitTraces(test_fixture_template)
@@ -271,6 +270,52 @@ def test_PursuitTraces_calculate_statistics_directional_rounddirection():
     all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":-1}],[{"interval":[4,5],"direction":-1}]]
     output = a.calculate_statistics_directional(compareimage,all_pursuits,buf = 3)
     assert output == {"A_directiongiven_B":[{"ref":1,"targ":-1},{"ref":-1,"targ":-1}],"B_directiongiven_A":[{"ref":-1,"targ":-1}]}
+
+def test_PursuitTraces_calculate_statistics():
+    a = PursuitTraces(test_fixture_template)
+    compareimage = np.array([[1,1,1,0,1,1],[0,0,0,0,1,0]])
+    all_pursuits = [[{"interval":[0,3],"direction":1},{"interval":[4,6],"direction":1}],[{"interval":[4,5],"direction":1}]]
+    output = a.calculate_statistics(compareimage,all_pursuits,buf = 0)
+    assert output["eventwise"] == {"A_detectedby_B":[False,True],"B_detectedby_A":[True]}
+    assert output["durationwise"] == {"A_proportionin_B":[0.0,0.5],"B_proportionin_A":[1.0]}
+    assert output["directional"] == {"A_directiongiven_B":[{"ref":1,"targ":0},{"ref":1,"targ":1}],"B_directiongiven_A":[{"ref":1,"targ":1}]}
+
+def test_PursuitTraces_get_trace_filter_compare_dir():
+    a = PursuitTraces(test_fixture_template)
+    experimentname = "mockexperiment"
+    r = 1
+    p = 2
+    filternames = ["mockfilter1","mockfilter2"]
+    output = a.get_trace_filter_compare_dir(experimentname,r,p,filternames)
+    assert output == "/Volumes/TOSHIBA EXT STO/RTTemp_Traces/test_dir/mockexperiment_Pursuit_Events/FILTER_A_mockfilter1_FILTER_B_mockfilter2/ROI_1/PART_2"
+
+def test_PursuitTraces_get_trace_filter_compare_dir_singlet():
+    a = PursuitTraces(test_fixture_template)
+    experimentname = "mockexperiment"
+    r = 1
+    p = 2
+    filternames = ["mockfilter2"]
+    output = a.get_trace_filter_compare_dir(experimentname,r,p,filternames)
+    assert output == "/Volumes/TOSHIBA EXT STO/RTTemp_Traces/test_dir/mockexperiment_Pursuit_Events/FILTER_A_raw_FILTER_B_mockfilter2/ROI_1/PART_2"
+
+def test_PursuitTraces_get_trace_filter_compare_dir_fail():
+    a = PursuitTraces(test_fixture_template)
+    experimentname = "mockexperiment"
+    r = 1
+    p = 2
+    filternames = "mockfilter2"
+    with pytest.raises(AssertionError):
+        output = a.get_trace_filter_compare_dir(experimentname,r,p,filternames)
+
+def test_PursuitTraces_retrieve_groundtruth_statistics_eventwise():
+    a = PursuitTraces(test_fixture_template)
+    filternames = ["groundtruth"]
+    results = a.retrieve_groundtruth_statistics_eventwise(close_experiment["ExperimentName"],filternames)
+    assert results["experimentname"] == "TempTrial2"
+    assert results["filternames"] == filternames
+    assert results[0][0] == {'false_detect':1.0,"true_detect":0.0}
+    assert results[1][0] == {'false_detect':0.6,"true_detect":0.8666666666666667}
+    
 #def test_load_spec():
 #    a = PursuitVideo("test_fixtures/template.json")
 #

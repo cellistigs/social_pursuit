@@ -1268,8 +1268,8 @@ class PursuitTraces(object):
             for p in range(parts):
                 self.compare_pursuits_traceset(experimentname,r,p,filternames)
 
-    def retrieve_groundtruth_statistics(self,experimentname,filternames):
-        """Assuming one has calculated pursuit comparisons between a pair of filters, computes the statistics across the whole experiment (all included boxes.) 
+    def retrieve_groundtruth_statistics_eventwise(self,experimentname,filternames):
+        """Assuming one has calculated pursuit comparisons between a pair of filters, computes the eventwise statistics across the whole experiment (all included boxes.) 
 
         :param experimentname: The name of the experiment within this dataset's metadata that we are analyzing.  
         :param filternames: The names of the filters that we will be comapring against.
@@ -1289,14 +1289,17 @@ class PursuitTraces(object):
         results["filternames"] = filternames
         for r in rois:
             results[r] = {}
+            ## initialize a container for the total true and false detections across the experiment. 
+            whole_exp_eventwise = {"A_detectedby_B":[],"B_detectedby_A":[]}
             for p in range(parts):
                 directoryname = self.get_trace_filter_compare_dir(experimentname,r,p,filternames)
                 if os.path.exists(directoryname):
                     with open(os.path.join(directoryname,"Comparison_Statistics.json"),"r") as f:
                         compinfo = json.load(f)
+
                     eventwise_stats = compinfo["eventwise"]
-                    durationwise_stats = compinfo["durationwise"]
-                    directionwise_stats = compinfo["directional"]
+                    [whole_exp_eventwise[k].extend(compinfo["eventwise"][k]) for k in compinfo["eventwise"]]
+
                     true_detect_percentage = np.array(eventwise_stats["B_detectedby_A"]).astype(int)
                     false_detect_percentage = np.array(eventwise_stats["A_detectedby_B"]).astype(int)
                     td = np.sum(true_detect_percentage)/len(true_detect_percentage)
@@ -1304,6 +1307,11 @@ class PursuitTraces(object):
                     results[r][p] = {"true_detect":td,"false_detect":fd}
                 else:
                     print("ground truth does not exist.")
+            true_detect_percentage = np.array(whole_exp_eventwise["B_detectedby_A"]).astype(int)
+            false_detect_percentage = np.array(whole_exp_eventwise["A_detectedby_B"]).astype(int)
+            td = np.sum(true_detect_percentage)/len(true_detect_percentage)
+            fd = (len(false_detect_percentage)-np.sum(false_detect_percentage))/len(false_detect_percentage)
+            results[r]["total"] = {"true_detect":td,"false_detect":fd}
         return results
 
 

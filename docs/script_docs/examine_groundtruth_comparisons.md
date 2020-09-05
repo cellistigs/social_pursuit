@@ -1,5 +1,5 @@
 
-Script documentation for file: examine_groundtruth_comparisons, Updated on:2020-09-05 12:47:45.993865
+Script documentation for file: examine_groundtruth_comparisons, Updated on:2020-09-05 13:21:08.373170
 =====================================================================================================
 
 # Summary
@@ -15,53 +15,56 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 
 |Part|ROI0_true detection proporition|ROI0_false detection proportion|ROI1_true detection proporition|ROI1_false detection proportion|ROI2_true detection proporition|ROI2_false detection proportion|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|0|0.0|1.0|0.86|0.6|1.0|0.6842105263157895|
-|1|None|None|0.66|0.5121951219512195|1.0|0.5|
-|2|1.0|0.875|0.90|0.1891891891891892|0.87|0.725|
-|3|None|None|1.0|0.23076923076923078|1.0|0.875|
-|4|1.0|0.5|1.0|0.4666666666666667|None|None|
-|5|None|None|None|None|0.85|0.625|
-|6|1.0|0.875|None|None|1.0|0.8888888888888888|
+|0|0.0|1.0|0.86|0.6|1.0|0.68|
+|1|None|None|0.66|0.51|1.0|0.5|
+|2|1.0|0.87|0.90|0.18|0.87|0.72|
+|3|None|None|1.0|0.23|1.0|0.87|
+|4|1.0|0.5|1.0|0.46|None|None|
+|5|None|None|None|None|0.85|0.62|
+|6|1.0|0.87|None|None|1.0|0.88|
 |7|None|None|None|None|None|None|
 |8|None|None|1.0|0.0|None|None|
+|9|0.83|0.88|0.88|0.35|0.92|0.70|
   
 
 ### TempTrial7
 
 |Part|ROI0_true detection proporition|ROI0_false detection proportion|ROI1_true detection proporition|ROI1_false detection proportion|ROI2_true detection proporition|ROI2_false detection proportion|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|0|0.72|0.581081081081081|0.61|0.7|0.77|0.782608695652174|
-|1|0.66|0.5925925925925926|0.25|0.9333333333333333|1.0|0.9230769230769231|
+|0|0.72|0.58|0.61|0.7|0.77|0.78|
+|1|0.66|0.59|0.25|0.93|1.0|0.92|
 |2|0.66|0.75|None|None|None|None|
-|3|0.75|0.7727272727272727|None|None|1.0|0.4|
+|3|0.75|0.77|None|None|1.0|0.4|
 |4|None|None|None|None|0.0|1.0|
 |5|0.0|1.0|0.5|0.8|None|None|
 |6|None|None|1.0|0.5|None|None|
 |7|None|None|None|None|None|None|
 |8|None|None|None|None|None|None|
+|9|0.67|0.63|0.54|0.75|0.75|0.79|
   
 
 ### TempTrial8
 
 |Part|ROI0_true detection proporition|ROI0_false detection proportion|ROI1_true detection proporition|ROI1_false detection proportion|ROI2_true detection proporition|ROI2_false detection proportion|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|0|0.85|0.7142857142857143|1.0|0.7948717948717948|1.0|0.8947368421052632|
-|1|1.0|0.6486486486486487|0.66|0.8333333333333334|1.0|0.5|
-|2|1.0|0.46153846153846156|1.0|0.5714285714285714|None|None|
-|3|1.0|0.8235294117647058|1.0|0.6666666666666666|None|None|
-|4|None|None|1.0|0.8181818181818182|1.0|0.8|
-|5|None|None|1.0|0.42105263157894735|None|None|
+|0|0.85|0.71|1.0|0.79|1.0|0.89|
+|1|1.0|0.64|0.66|0.83|1.0|0.5|
+|2|1.0|0.46|1.0|0.57|None|None|
+|3|1.0|0.82|1.0|0.66|None|None|
+|4|None|None|1.0|0.81|1.0|0.8|
+|5|None|None|1.0|0.42|None|None|
 |6|None|None|None|None|None|None|
 |7|None|None|None|None|None|None|
 |8|None|None|None|None|None|None|
+|9|0.93|0.66|0.95|0.71|1.0|0.81|
   
 
 ### TempTrial9
 
 |Part|ROI0_true detection proporition|ROI0_false detection proportion|ROI1_true detection proporition|ROI1_false detection proportion|ROI2_true detection proporition|ROI2_false detection proportion|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|0|0.87|0.7884615384615384|0.66|0.8148148148148148|1.0|0.9411764705882353|
-|1|1.0|0.88|None|None|1.0|0.4444444444444444|
+|0|0.87|0.78|0.66|0.81|1.0|0.94|
+|1|1.0|0.88|None|None|1.0|0.44|
 |2|None|None|None|None|None|None|
 |3|None|None|None|None|None|None|
 |4|None|None|None|None|0.90|0.25|
@@ -69,19 +72,21 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 |6|None|None|None|None|None|None|
 |7|None|None|None|None|None|None|
 |8|None|None|None|None|None|None|
+|9|0.90|0.81|0.66|0.81|0.93|0.52|
   
 
 ### TempTrial10
 
 |Part|ROI0_true detection proporition|ROI0_false detection proportion|ROI1_true detection proporition|ROI1_false detection proportion|ROI2_true detection proporition|ROI2_false detection proportion|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|0|None|None|0.69|0.2727272727272727|0.81|0.72|
-|1|None|None|1.0|0.2413793103448276|0.62|0.9322033898305084|
-|2|None|None|1.0|0.7777777777777778|0.8|0.9518072289156626|
-|3|None|None|None|None|0.5|0.9722222222222222|
+|0|None|None|0.69|0.27|0.81|0.72|
+|1|None|None|1.0|0.24|0.62|0.93|
+|2|None|None|1.0|0.77|0.8|0.95|
+|3|None|None|None|None|0.5|0.97|
 |4|None|None|1.0|0.0|None|None|
 |5|None|None|None|None|None|None|
 |6|None|None|None|None|None|None|
 |7|None|None|1.0|0.5|0.0|1.0|
 |8|None|None|None|None|None|None|
+|9|nan|nan|0.79|0.30|0.75|0.85|
   
