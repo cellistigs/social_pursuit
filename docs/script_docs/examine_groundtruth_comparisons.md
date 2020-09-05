@@ -1,5 +1,5 @@
 
-Script documentation for file: examine_groundtruth_comparisons, Updated on:2020-09-05 13:27:49.244340
+Script documentation for file: examine_groundtruth_comparisons, Updated on:2020-09-05 13:36:33.699414
 =====================================================================================================
 
 # Summary
@@ -24,7 +24,7 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 |6|1.0|0.87|None|None|1.0|0.88|
 |None|None|None|None|None|None|None|
 |8|None|None|1.0|0.0|None|None|
-|total|0.83|0.88|0.88|0.35|0.92|0.70|
+|total|0.83 (Total:6)|0.88 (Total:63)|0.88 (Total:88)|0.35 (Total:213)|0.92 (Total:27)|0.70 (Total:157)|
   
 
 ### TempTrial7
@@ -40,7 +40,7 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 |6|None|None|1.0|0.5|None|None|
 |None|None|None|None|None|None|None|
 |None|None|None|None|None|None|None|
-|total|0.67|0.63|0.54|0.75|0.75|0.79|
+|total|0.67 (Total:46)|0.63 (Total:141)|0.54 (Total:22)|0.75 (Total:82)|0.75 (Total:12)|0.79 (Total:67)|
   
 
 ### TempTrial8
@@ -56,7 +56,7 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 |None|None|None|None|None|None|None|
 |None|None|None|None|None|None|None|
 |None|None|None|None|None|None|None|
-|total|0.93|0.66|0.95|0.71|1.0|0.81|
+|total|0.93 (Total:33)|0.66 (Total:143)|0.95 (Total:20)|0.71 (Total:97)|1.0 (Total:6)|0.81 (Total:53)|
   
 
 ### TempTrial9
@@ -72,7 +72,7 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 |None|None|None|None|None|None|None|
 |None|None|None|None|None|None|None|
 |None|None|None|None|None|None|None|
-|total|0.90|0.81|0.66|0.81|0.93|0.52|
+|total|0.90 (Total:11)|0.81 (Total:77)|0.66 (Total:6)|0.81 (Total:27)|0.93 (Total:15)|0.52 (Total:50)|
   
 
 ### TempTrial10
@@ -88,5 +88,5 @@ Here we present the raw/groundtruth comparison data, divided into experiments, r
 |None|None|None|None|None|None|None|
 |7|None|None|1.0|0.5|0.0|1.0|
 |None|None|None|None|None|None|None|
-|total|nan|nan|0.79|0.30|0.75|0.85|
+|total|nan (Total:0)|nan (Total:0)|0.79 (Total:67)|0.30 (Total:130)|0.75 (Total:48)|0.85 (Total:419)|
   
