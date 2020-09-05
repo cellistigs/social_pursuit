@@ -13,15 +13,23 @@ def convert_stats_to_list_of_strings(stats):
     keys = stats.keys()
     rois = [k for k in keys if type(k) == int]
     defaultstats = [] 
-    for i in range(9):
-        defaultstats.append([str(i),"None","None","None","None","None","None"])
+    for i in range(10):
+        defaultstats.append(["None"]*7)
     for roi in rois:
         roistats = stats[roi]
         for p,pdata in roistats.items():
+            if type(p) is int:
+                index = p
+                defaultstats[index][0] = str(p)
+            elif p == "total":
+                index = -1
+                defaultstats[index][0] = p
+            else:
+                raise Exception("index type invalid.")
             td = pdata["true_detect"]
             fd = pdata["false_detect"]
-            defaultstats[p][1+roi*2] = str(td)
-            defaultstats[p][roi*2+2] = str(fd)
+            defaultstats[index][1+roi*2] = str(td)[:4]
+            defaultstats[index][roi*2+2] = str(fd)[:4]
     return defaultstats
         
 
@@ -31,7 +39,7 @@ if __name__ == "__main__":
     experiment_stats = {}
     for exp,edict in pt.experiments.items():
         if edict.get("GroundTruth",None):
-            output = pt.retrieve_groundtruth_statistics(exp,filternames)
+            output = pt.retrieve_groundtruth_statistics_eventwise(exp,filternames)
             experiment_stats[exp] = output
 
 
@@ -53,7 +61,7 @@ if __name__ == "__main__":
         full_l_l_s.extend(convert_stats_to_list_of_strings(stats))
         flatten = [i for l in full_l_l_s for i in l]
         print(len(flatten))
-        mdFile.new_table(columns = 7,rows = 10,text = flatten,text_align = "center")
+        mdFile.new_table(columns = 7,rows = 11,text = flatten,text_align = "center")
     
     mdFile.new_line()
     mdFile.create_md_file()
