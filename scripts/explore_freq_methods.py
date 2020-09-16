@@ -1,6 +1,6 @@
 ### Script to explore frequency and time-frequency methods for the analysis of this data. 
 import os
-from script_doc_utils import initialize_doc,insert_image
+from script_doc_utils import initialize_doc,insert_image,get_relative_image_path
 from social_pursuit import data, fft
 from mdutils.mdutils import MdUtils
 from analysis_params import metadata_path
@@ -20,12 +20,28 @@ if __name__ == "__main__":
     
     ## Plot a test trace that looks realistic.  
     md.new_header(level = 2, title = "Candidate dataset")
+    md.new_paragraph("We will pilot these analyses on a candidate pursuit instance whose filename can be found in the accompanying script.")
     image1_path = "../docs/script_docs/images/candidate_pursuit.png"
     pt.plot_trajectories_from_filenames(experimentname,roi,part,[filename],image1_path)
-
-    insert_image(md,image1_path)
+    image1_rel_path = get_relative_image_path(image1_path) 
+    insert_image(md,image1_rel_path,align = 'center')
+    md.new_paragraph("We will focus on the dam's trajectory in subsequent analyses (shown here in purple)")
 
     ### Look at the fourier transform, spectrum, power spectral density, and reconstruction. 
+    md.new_paragraph("First, we can generate a fourier transform of the data. We do so by first projecting the y axis of the data to the imaginary axis, treating the two dimensional dam's centroid trajectory as a one dimensional complex trajectory. Here we show the spectrum of the dam's centroid trajectory, discarding the phase information for ease of presentation.")
+    analysisobj = fft.PursuitFFT([filename])   
+    z = analysisobj.load_data(filename)
+    trace = z["mtraj"]
+    image2_path = "../docs/script_docs/images/candidate_pursuit_dam_spectrum.png" 
+    analysisobj.plot_spectrum(trace,image2_path)
+    image2_rel_path = get_relative_image_path(image2_path)
+    insert_image(md,image2_rel_path,align = 'center')
+    md.new_paragraph("This representation shows that there is a sharp peak in the frequency content of this trajectory in frequencies close to zero. This means that relatively slow frequencies dominate the activity that we see, setting us up to reduce dimensionality by considering only the low frequency activity in further analyses. ")
+    md.new_paragraph("We can also apply an inverse fourier transform to reconstruct the data back from this frequency representation:")
+    image3_path = "../docs/script_docs/images/candidate_pursuit_dam_full_reconstruct.png"
+    analysisobj.plot_compare_trace_reconstruct(trace,image3_path)
+    image3_rel_path = get_relative_image_path(image3_path)
+    insert_image(md,image3_rel_path,align = 'center')
 
     ## Plot a rotated and translated version of that test trace and see how that fares under same analytics.  
 
