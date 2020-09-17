@@ -1,5 +1,5 @@
 
-Script documentation for file: explore_freq_methods, Updated on:2020-09-16 00:43:28.007349
+Script documentation for file: explore_freq_methods, Updated on:2020-09-16 01:07:42.286959
 ==========================================================================================
 
 # Summary
@@ -21,9 +21,11 @@ First, we can generate a fourier transform of the data. We do so by first projec
     <img src="./images/candidate_pursuit_dam_spectrum.png" />
 </p>
 
-This representation shows that there is a sharp peak in the frequency content of this trajectory in frequencies close to zero. This means that relatively slow frequencies dominate the activity that we see, setting us up to reduce dimensionality by considering only the low frequency activity in further analyses. 
+This representation shows that there is a sharp peak in the frequency content of this trajectory in frequencies close to zero. This means that relatively slow frequencies dominate the activity that we see, setting us up to reduce dimensionality by considering only the low frequency activity in further analyses. Furthermore, the existence of positive and negative frequencies indicate components that rotate in opposing directions. Symmetry between the positive and negative frequencies should (I think) indicate straight trajectories, or trajectories with an equal and opposing amount of rotation to the left vs. the right.
 
 We can also apply an inverse fourier transform to reconstruct the data back from this frequency representation:  
 <p align="center">
     <img src="./images/candidate_pursuit_dam_full_reconstruct.png" />
 </p>
+
+One important thing we want to do with these datasets now is to cluster them. In order to do so, we should figure out which invariances we care about. For example, by disregarding the 0th component of the fourier transform, we can translate all trajectories back to be centered at the origin, allowing for comparison only of the morphologies of the resulting trajectories. 
