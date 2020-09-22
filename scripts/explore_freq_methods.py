@@ -8,13 +8,12 @@ from mdutils.mdutils import MdUtils
 from analysis_params import metadata_path
 from joblib import Memory
 cachedir = "/Volumes/TOSHIBA EXT STO/cache"
-memory = Memory(cachedir, verbose=1)
+memory = Memory(cachedir, verbose=0)
 
 imagedir = "../docs/script_docs/images/"
 scriptdir = "../docs/script_docs/"
 fps = 30
 
-@memory.cache
 def initialize_analysis_objects(experimentname,roi,part,interval,filtername):
     pt = data.PursuitTraces(metadata_path)
     tracedirectory = pt.get_trace_filter_dir(experimentname,roi,part,filtername)
@@ -23,6 +22,14 @@ def initialize_analysis_objects(experimentname,roi,part,interval,filtername):
     analysisobj = fft.PursuitFFT([filename],fps)   
 
     return pt,analysisobj,filename
+
+def plot_trace_bandpass(corrupted,band,image3_path):
+    reconstructed = analysisobj.reconstruct_trace_bandpass(corrupted,band)
+    plt.plot(reconstructed[:,0],reconstructed[:,1])
+    plt.axis("off")
+    plt.title("Reconstruction from band {}".format(band))
+    plt.savefig(image3_path)
+    plt.close()
 
 if __name__ == "__main__":
     experimentname = "TempTrial2"
@@ -40,7 +47,7 @@ if __name__ == "__main__":
     md.new_header(level = 3, title = "Amplitude and Phase representation")
     md.new_paragraph("First, we try applying fourier transforms to a straight line segment that aligns with y = -x.")
     
-    straighttrace = np.concatenate([np.linspace(0,1,30)[:,None],np.linspace(-1,0,30)[:,None]],axis =1)
+    straighttrace = np.concatenate([np.linspace(-0.5,0.5,30)[:,None],np.linspace(0.5,-0.5,30)[:,None]],axis =1)
     plt.plot(straighttrace[:,0],straighttrace[:,1])
     plt.axis("off")
     plt.title("Toy trajectory")
@@ -54,7 +61,7 @@ if __name__ == "__main__":
     analysisobj.plot_phase_amplitude(straighttrace,imagestraightpath)
     relimagestraightpath = get_relative_image_path(imagestraightpath)
     insert_image(md,relimagestraightpath,align = 'center')
-    md.new_paragraph("On the left, we can see the phase content of the fourier transform, ordered by frequency. The phase component determines the 'initial conditions for each frequency value'. By applying a rotation to all of these phases, we can similarly rotate the trajectory in space. We can separately examine the amplitude content to the right. The existence of positive and negative frequencies indicate components that rotate in opposing directions. Symmetry between the positive and negative frequencies indicates straight trajectories, or trajectories with an equal and opposing amount of rotation to the left vs. the right. Note that when we have an even number of input points, the resulting fft representation gives the positive and negative nyquist frequency as a single term, leading to apparent asymmetry. We have symmetrized the representation here for purposes of visual depiction. Note that because 1) the FFT is linear and 2) spectra throw away all rotational information, the spectrum of the FFT will be identical regardless of the rotational orientation of a trajectory. ")
+    md.new_paragraph("On the left, we can see the phase content of the fourier transform, ordered by frequency. The phase component determines the 'initial conditions' for each frequency value. Moreover, for we can see that (despite the discontinuities introduced by the range (-pi, pi)), the coefficient phases at the negative and positive frequencies have the same slope. By applying a rotation to all of these phases, we can similarly rotate the trajectory in space (because the Fourier Transform is a linear operation). We can separately examine the amplitude content to the right. The existence of positive and negative frequencies indicate components that rotate in opposing directions. Symmetry between the positive and negative frequencies indicates straight trajectories, or trajectories with an equal and opposing amount of rotation to the left vs. the right. Note that when we have an even number of input points, the resulting fft representation gives the positive and negative nyquist frequency as a single term, leading to apparent asymmetry. We have symmetrized the representation here for purposes of visual depiction. Note that because 1) the FFT is linear and 2) spectra throw away all rotational information, the spectrum of the FFT will be identical regardless of the rotational orientation of a trajectory. ")
 
     ## Dim reduction: what happens if we throw away some components? 
     md.new_header(level = 3,title = "reconstruction")
@@ -74,18 +81,28 @@ if __name__ == "__main__":
     relimagestraightpath = get_relative_image_path(imagestraightpath)
     insert_image(md,relimagestraightpath,align = 'center')
     md.new_paragraph("We can see that the resulting phase and amplitude diagram are significantly altered by the noise (and are notably no longer symmetric). Since we know that much of the fluctuations are at a small scale, what happens if we just discard the small scale information by zeroing trajectories below a certain threshold?")
-    image3_path = "../docs/script_docs/images/noisylinereconstruct.png"
     band = [-5,5]
-    reconstructed = analysisobj.reconstruct_trace_bandpass(corrupted,band)
-    plt.plot(reconstructed[:,0],reconstructed[:,1])
-    plt.axis("off")
-    plt.title("Reconstruction from band {}".format(band))
-    plt.savefig(image3_path)
-    plt.close()
+    image3_path = "../docs/script_docs/images/noisylinereconstruct.png"
+    plot_trace_bandpass(corrupted,band,image3_path)
     image3_rel_path = get_relative_image_path(image3_path)
     insert_image(md,image3_rel_path,align = 'center')
     md.new_paragraph("This reconstruction was performed by zeroing the fourier coefficients outside of the range {}. It is not a great reconstruction, but one can see that it preserves the general shape features of the trajectory well. This is a good basis for featurization, if not for outright reconstruction.".format(band))
     ## What happens if we symmetrize a spectrum?  
+    md.new_header(level = 3, title = "Asymmetry analysis and symmetrization")
+    md.new_paragraph("Finally, we want to take a closer look at the asymmetry between the positive and negative frequencies of the fourier spectrum, which indicates overall rotational trends.")
+    image_symm_path = "../docs/script_docs/images/straightlinesymm.png"
+    analysisobj.plot_spectral_asymmetry_trace(straighttrace,image_symm_path)
+    insert_image(md,get_relative_image_path(image_symm_path),align = "center")
+    md.new_paragraph("We motivate this analysis from the idea that the FFT for a purely real trajectory is Hermitian: F(-x) - F*(x). This means that for our trajectories, where we project the y coordinate to the imaginary plane, any trajectories that are purely horizontal will have a amplitude and phase difference of zero (when measuring relative to hermitian symmetry.) Any straight lines will therefore have an amplitude difference of 0, and a constant phase difference across all trajectories. We can confirm this visually in the plot above (note the scale on the y axis.)")
+    md.new_paragraph("Let's see what happens when we measure this same asymmetry for our corrupted trajectory. ")
+    image_noisesymm_path = "../docs/script_docs/images/noisedlinesymm.png"
+    analysisobj.plot_spectral_asymmetry_trace(corrupted,image_noisesymm_path)
+    insert_image(md,get_relative_image_path(image_noisesymm_path),align = "center")
+    md.new_paragraph("We see that the difference measures fluctuate around the true values given above.")
+
+    
+
+
     
     
 
