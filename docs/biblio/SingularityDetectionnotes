@@ -5,6 +5,7 @@
 #Tsung et al. 1999: applications to denoising. Better performance? 
     #There are some articles on statistical properties of wavelet detection for structural damage, maybe worth looking into. 
 #Dragotti et al. 2003 seems to build on the same idea as Tsung et al. 1999 by introducing spatial footprints.
+#Bigot 2005 introduces the "structural intensity" as a measure to characterize different singularities. 
 #The main issue would be that of analyzing 2d trajectories in space. It seems sort of uncanny that this has not been handled yet, but it would be interesting to address. 
 #
 ##What are the stakes? 
