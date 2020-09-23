@@ -1,0 +1,13 @@
+## There appears to be a rich literature in changepoint detection with wavelets, under the name of singularity detection. This literature is primarily focused on the analysis of 1 dimensional real trajectories and two dimensional images, but it's not clear if this means it's a no go for trajectories. In the worst case, we can always just analyze the two coordinates independently, or do an x + y transform.In this literature, we should look at:   
+
+#mallat et al. 1992: the original paper describing the efficacy of wavelets in detecting singularities. This looks like it's worth going through in detail. Alternatively, there is a book, "a wavelet tour of signal processing" that would be worth going through.  
+#This book is mallat et al. 2008. In particular, try reading chapter 6, "wavelet zoom" tomorrow. 
+#Tsung et al. 1999: applications to denoising. Better performance? 
+    #There are some articles on statistical properties of wavelet detection for structural damage, maybe worth looking into. 
+#Dragotti et al. 2003 seems to build on the same idea as Tsung et al. 1999 by introducing spatial footprints.
+#The main issue would be that of analyzing 2d trajectories in space. It seems sort of uncanny that this has not been handled yet, but it would be interesting to address. 
+#
+##What are the stakes? 
+#We already have heuristics for singularity detection, but it would be good to see if we can improve upon existing performance. 
+#In addition to improving on performance, are there any preferable features of singularity detection through wavelets that would prioritize them over our current methods? i.e., if we are able to remove them at the same time? 
+

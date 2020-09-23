@@ -1,0 +1,1 @@
+This review covers general tools for change point detection. If it comes to be that we have to design our own change point detection, this may be a good tool. In general, we should consider the CUSUM and pseudo bayesian SR methods that are mentioned in this review first, if we come upon the need for online methods in the future. 
