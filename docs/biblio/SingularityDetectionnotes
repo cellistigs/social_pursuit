@@ -2,12 +2,16 @@
 
 #mallat et al. 1992: the original paper describing the efficacy of wavelets in detecting singularities. This looks like it's worth going through in detail. Alternatively, there is a book, "a wavelet tour of signal processing" that would be worth going through.  
 #This book is mallat et al. 2008. In particular, try reading chapter 6, "wavelet zoom" tomorrow. 
+#Mallat et al provides the theoretical justifications for using a wavelet transform to analyze data, as well as the introductory material on the Wavelet Transform Modulus Maxima representation, and its value in detecting singularities. Notably, this exposition is restricted to one dimensional singularities, and furthermore the localization methods are limited to isolated singularities.     
+#
 #Tsung et al. 1999: applications to denoising. Better performance? 
     #There are some articles on statistical properties of wavelet detection for structural damage, maybe worth looking into. 
 #Dragotti et al. 2003 seems to build on the same idea as Tsung et al. 1999 by introducing spatial footprints.
 #Bigot 2005 introduces the "structural intensity" as a measure to characterize different singularities. 
 #The main issue would be that of analyzing 2d trajectories in space. It seems sort of uncanny that this has not been handled yet, but it would be interesting to address. 
-#
+#Tu et al handle this in the context of object contours. 
+#Struzik 1999: Extention of Mallat framework to localization of dense singularities using the correct model-based biases. 
+#If we can push into Struzik et al., we can estimate the size of singularities, which in itself might be useful. 
 ##What are the stakes? 
 #We already have heuristics for singularity detection, but it would be good to see if we can improve upon existing performance. 
 #In addition to improving on performance, are there any preferable features of singularity detection through wavelets that would prioritize them over our current methods? i.e., if we are able to remove them at the same time? 
