@@ -1,5 +1,5 @@
 
-Script documentation for file: explore_freq_methods, Updated on:2020-09-18 18:45:30.283669
+Script documentation for file: explore_freq_methods, Updated on:2020-09-22 12:17:14.556476
 ==========================================================================================
 
 # Summary
@@ -21,7 +21,7 @@ We generate a fourier transform for this trace by projecting the y axis to the i
     <img src="./images/straighttracephaseamp.png" />
 </p>
 
-On the left, we can see the phase content of the fourier transform, ordered by frequency. The phase component determines the 'initial conditions for each frequency value'. By applying a rotation to all of these phases, we can similarly rotate the trajectory in space. We can separately examine the amplitude content to the right. The existence of positive and negative frequencies indicate components that rotate in opposing directions. Symmetry between the positive and negative frequencies indicates straight trajectories, or trajectories with an equal and opposing amount of rotation to the left vs. the right. Note that when we have an even number of input points, the resulting fft representation gives the positive and negative nyquist frequency as a single term, leading to apparent asymmetry. We have symmetrized the representation here for purposes of visual depiction. Note that because 1) the FFT is linear and 2) spectra throw away all rotational information, the spectrum of the FFT will be identical regardless of the rotational orientation of a trajectory. 
+On the left, we can see the phase content of the fourier transform, ordered by frequency. The phase component determines the 'initial conditions' for each frequency value. Moreover, for we can see that (despite the discontinuities introduced by the range (-pi, pi)), the coefficient phases at the negative and positive frequencies have the same slope. By applying a rotation to all of these phases, we can similarly rotate the trajectory in space (because the Fourier Transform is a linear operation). We can separately examine the amplitude content to the right. The existence of positive and negative frequencies indicate components that rotate in opposing directions. Symmetry between the positive and negative frequencies indicates straight trajectories, or trajectories with an equal and opposing amount of rotation to the left vs. the right. Note that when we have an even number of input points, the resulting fft representation gives the positive and negative nyquist frequency as a single term, leading to apparent asymmetry. We have symmetrized the representation here for purposes of visual depiction. Note that because 1) the FFT is linear and 2) spectra throw away all rotational information, the spectrum of the FFT will be identical regardless of the rotational orientation of a trajectory. 
 ### reconstruction
 
 
@@ -44,7 +44,19 @@ This reconstruction was performed by zeroing the fourier coefficients outside of
 ### Asymmetry analysis and symmetrization
 
 
-Finally, we want to take a closer look at the asymmetry between the positive and negative frequencies of the fourier spectrum, which indicates overall rotational trends.
+Finally, we want to take a closer look at the asymmetry between the positive and negative frequencies of the fourier spectrum, which indicates overall rotational trends.  
+<p align="center">
+    <img src="./images/straightlinesymm.png" />
+</p>
+
+We motivate this analysis from the idea that the FFT for a purely real trajectory is Hermitian: F(-x) - F*(x). This means that for our trajectories, where we project the y coordinate to the imaginary plane, any trajectories that are purely horizontal will have a amplitude and phase difference of zero (when measuring relative to hermitian symmetry.) Any straight lines will therefore have an amplitude difference of 0, and a constant phase difference across all trajectories. We can confirm this visually in the plot above (note the scale on the y axis.)
+
+Let's see what happens when we measure this same asymmetry for our corrupted trajectory.   
+<p align="center">
+    <img src="./images/noisedlinesymm.png" />
+</p>
+
+We see that the difference measures fluctuate around the true values given above.
 ## Candidate dataset
 
 

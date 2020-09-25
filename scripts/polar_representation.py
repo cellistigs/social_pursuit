@@ -80,5 +80,10 @@ if __name__ == "__main__":
     plt.title(r"\theta_2 for both pairs of mice over first 10000 time frames.")
     fig = plt.gcf()
     save_and_insert_image(md,fig,path = "../docs/script_docs/images/full_theta2.png",align = "center")
+    md.new_paragraph("A good next step would be to characterize the clustering of these angles through time. We can come up with a criterion for when we are correctly tracking two animals at all, and when we degenerate to tracking the body parts on just one. From this, it might be possible to reconstruct trajectories at various different levels.")
+    md.new_header(title = "Error detection and Reconstruction",level = 2)
+    md.new_paragraph("We need a good policy to handle errors in the raw DLC tracking data. This policy should distinguish error cases where we have switches from those where we have completely lost the position of an animal, and treat them differently. Let's first come up with a classifier that determines when traces are clean, when there are switches, and when an animal is wholly missing.")
+    plt.hist(all_angles[0,:])
+    plt.show()
 
     md.create_md_file()

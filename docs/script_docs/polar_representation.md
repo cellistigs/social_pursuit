@@ -1,5 +1,5 @@
 
-Script documentation for file: polar_representation, Updated on:2020-09-25 00:05:35.171842
+Script documentation for file: polar_representation, Updated on:2020-09-25 15:05:14.363327
 ==========================================================================================
 
 # Summary
@@ -19,3 +19,9 @@ Seeing $	heta_2$ coordinates for the dam's body parts reveals points in time whe
 <p align="center">
     <img src="./images/full_theta2.png" />
 </p>
+
+A good next step would be to characterize the clustering of these angles through time. We can come up with a criterion for when we are correctly tracking two animals at all, and when we degenerate to tracking the body parts on just one. From this, it might be possible to reconstruct trajectories at various different levels.
+## Error detection and Reconstruction
+
+
+We need a good policy to handle errors in the raw DLC tracking data. This policy should distinguish error cases where we have switches from those where we have completely lost the position of an animal, and treat them differently. Let's first come up with a classifier that determines when traces are clean, when there are switches, and when an animal is wholly missing.
