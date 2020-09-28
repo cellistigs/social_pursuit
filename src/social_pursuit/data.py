@@ -310,6 +310,14 @@ class PursuitTraces(object):
         vtraj = dataset["virgin_centroid_traj"][indexslice,:]
         mtip = dataset["dam_tip_traj"][indexslice,:]
         vtip = dataset["virgin_tip_traj"][indexslice,:]
+        ###
+        mlear = dataset["dam_leftear_traj"][indexslice,:]
+        vlear = dataset["virgin_leftear_traj"][indexslice,:]
+        mrear = dataset["dam_rightear_traj"][indexslice,:]
+        vrear = dataset["virgin_rightear_traj"][indexslice,:]
+        mtail = dataset["dam_tailbase_traj"][indexslice,:]
+        vtail = dataset["virgin_tailbase_traj"][indexslice,:]
+        ###
         pursuit_direction = dataset["pursuit_direction"][:,indexslice]
         pursuit_direction_agg = np.sign(np.sum(pursuit_direction))
 
@@ -321,6 +329,14 @@ class PursuitTraces(object):
         intervaldict["vtraj"] = vtraj
         intervaldict["mtip"] = mtip
         intervaldict["vtip"] = vtip
+        ###
+        intervaldict["mlear"] = mlear
+        intervaldict["vlear"] = vlear
+        intervaldict["mrear"] = mrear
+        intervaldict["vrear"] = vrear
+        intervaldict["mtail"] = mtail
+        intervaldict["vtail"] = vtail
+        ###
         intervaldict["pursuit_direction"] = pursuit_direction
         intervaldict["pursuit_direction_agg"] = pursuit_direction_agg
         return intervaldict,pursuit_direction_agg
@@ -346,26 +362,6 @@ class PursuitTraces(object):
             
             for interval in intervals:
                 intervaldict,pdir = self.get_intervaldict(dataset,interval,r,p,experimentname=edict["ExperimentName"]) 
-                #intervaldict = {}
-                #indexslice = slice(*interval)
-
-                #mtraj = dataset["dam_centroid_traj"][indexslice,:]
-                #vtraj = dataset["virgin_centroid_traj"][indexslice,:]
-                #mtip = dataset["dam_tip_traj"][indexslice,:]
-                #vtip = dataset["virgin_tip_traj"][indexslice,:]
-                #pursuit_direction = dataset["pursuit_direction"][:,indexslice]
-                #pursuit_direction_agg = np.sign(np.sum(pursuit_direction))
-
-                #intervaldict["ExperimentName"] = edict["ExperimentName"]
-                #intervaldict["ROI"] = r
-                #intervaldict["VideoPart"] = p
-                #intervaldict["Interval"] = interval
-                #intervaldict["mtraj"] = mtraj
-                #intervaldict["vtraj"] = vtraj
-                #intervaldict["mtip"] = mtip
-                #intervaldict["vtip"] = vtip
-                #intervaldict["pursuit_direction"] = pursuit_direction
-                #intervaldict["pursuit_direction_agg"] = pursuit_direction_agg
                 dict_name = "Pursuit{I}_Direction{P}.npy".format(I = interval,P = pdir)
 
                 np.save(os.path.join(part_fullpath,dict_name),intervaldict)
@@ -547,6 +543,7 @@ class PursuitTraces(object):
         ax = plt.gca()
         ax.axes.xaxis.set_visible(False)
         ax.axes.yaxis.set_visible(False)
+        plt.axis("off")
         plt.savefig(plotpath)
         plt.close()
 
@@ -630,8 +627,10 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == 1:
             if it == 0:
-                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
-                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
+                #ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
+                #ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
+                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
             else:
                 ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
                 ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
@@ -644,8 +643,10 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == 1:
             if it == 0:
-                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor,label = "dam")
-                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor,label = "virgin")
+                #ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor,label = "dam")
+                #ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor,label = "virgin")
+                ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
+                ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
             else:
                 ax.plot(mtraj[-1,0],mtraj[-1,1],"x",color = damcolor)
                 ax.plot(vtraj[-1,0],vtraj[-1,1],"x",color = virgincolor)
@@ -658,8 +659,10 @@ class PursuitTraces(object):
         vtraj = data["vtraj"]
         if data["pursuit_direction_agg"] == -1:
             if it == 0:
-                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
-                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
+                #ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor,label = "dam")
+                #ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor,label = "virgin")
+                ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
+                ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
             else:
                 ax.plot(mtraj[0,0],mtraj[0,1],"o",color = damcolor)
                 ax.plot(vtraj[0,0],vtraj[0,1],"o",color = virgincolor)
@@ -1079,7 +1082,7 @@ class PursuitTraces(object):
                     p = int(filteredpart[i,0])
                     filtered_dir =  self.get_trace_filter_dir(experimentname,r,p,"groundtruth")
                     mkdir_notexists(filtered_dir)
-                    interval = filteredindex[i,:].astype(int)
+                    interval = list(filteredindex[i,:].astype(int))
                     tracename = "{e}roi_{r}cropped_part{p}".format(e=experimentname,r=r,p=p)+self.trace_suffix
                     dataset = loadmat(os.path.join(self.path,tracename))
                     intervaldict,pdir_proposed = self.get_intervaldict(dataset,interval,r,p,experimentname)
@@ -1309,20 +1312,25 @@ class PursuitTraces(object):
                     print("ground truth does not exist.")
             true_detect_percentage = np.array(whole_exp_eventwise["B_detectedby_A"]).astype(int)
             false_detect_percentage = np.array(whole_exp_eventwise["A_detectedby_B"]).astype(int)
-            td = np.sum(true_detect_percentage)/len(true_detect_percentage)
-            fd = (len(false_detect_percentage)-np.sum(false_detect_percentage))/len(false_detect_percentage)
-            results[r]["total"] = {"true_detect":td,"false_detect":fd}
+            total_true = len(true_detect_percentage)
+            total_false = len(false_detect_percentage)
+            td = np.sum(true_detect_percentage)/total_true
+            fd = (total_false-np.sum(false_detect_percentage))/total_false
+            results[r]["total"] = {"true_detect":td,"false_detect":fd,"true_total":total_true,"false_total":total_false}
         return results
 
-
-
-
-
-
+    def skeleton_clustering(self,experimentname,r,p,interval,filtername = None):
+        """Imports data for each pursuit detected in a traceset, and plots all the trajectories found there.  
         
-
-
-
+        :param experimentname: name of the experiment we will be analyzing.
+        :param r: Integer giving the roi we are interested in.
+        :param p: Integer giving the video part we are interested in.
+        :param interval: Interval of frames that define this event. 
+        :param filtername: If you applied a filter, looks in that filter directory to plot. 
+        """
+        data = self.load_trace_data(experimentname,r,p,interval,filtername)
+        part_ids = ["mtraj","vtraj","mtip","vtip","mlear","vlear","mrear","vrear","mtail","vtail"]
+        
 class PursuitVideo(object):
     """
     Data class for videos of behavioral pursuit. Initialized from json files providing metadata about the location of the data  
@@ -1388,6 +1396,65 @@ class PursuitVideo(object):
 
     def write_frame_s3(self,path,timestamp):
         pass
+
+class Polar(object):
+    """Implements a polar representation of trajectory data, as well as associated methods for cluster analysis, denoising, etc.  
+
+    :param path: Path to a matlab data object. 
+    """
+    def __init__(self,path):
+        self.path = path
+        self.nameroots = ["virgin","dam"]
+        self.partroots = ["tip_traj","leftear_traj","rightear_traj","centroid_traj","tailbase_traj"]
+        assert os.path.exists(path)
+        assert os.path.splitext(path)[1] == ".mat","must be a mat file."
+
+    def load_data(self):
+        """Load in data, and return a structured array of trajectories of shape (time, coordinate, part, mouse)
+
+        """
+        data = loadmat(self.path)
+        all_keys = ["{}_{}".format(n,p) for n in self.nameroots for p in self.partroots]
+        for k in all_keys:
+            assert k in data.keys()
+        vtrajdata = [data[dat] for dat in all_keys[:5]]    
+        dtrajdata = [data[dat] for dat in all_keys[5:]]    
+        struct_vtraj = np.stack(vtrajdata,axis = 2)
+        struct_dtraj = np.stack(dtrajdata,axis = 2)
+        struct_traj = np.stack([struct_vtraj,struct_dtraj],axis = 3)
+        return struct_traj
+
+    def get_average(self,data):
+        """Average of all detected positions in cartesian coordinates. 
+
+        :param data: numpy array of time, coordinate, part, mouse 
+        """
+        stacked = np.concatenate([data[:,:,:,0],data[:,:,:,1]], axis = 2)
+        average_traj = np.mean(stacked,axis = -1)
+        return average_traj
+    
+    def get_centered(self,data,avg):
+        """Get baseline subtracted representation of the data in cartesian coordinates given raw data and an average. 
+
+        :param data: numpy array of time, coordinate, part, mouse
+        :param avg: numpy array matching data in first two parameters.
+        """
+        assert data.shape[:2] == avg.shape
+        vcentered = data[:,:,:,0] - avg[:,:,None,None] 
+        dcentered = data[:,:,:,1] - avg[:,:,None,None] 
+        return vcentered,dcentered
+
+
+    def get_polar_representation(self):
+        """Gets a polar representation of the data, representing first the mean position, and 
+
+        """
+
+
+
+
+
+
 
 
 
