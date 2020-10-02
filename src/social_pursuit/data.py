@@ -1440,15 +1440,83 @@ class Polar(object):
         :param avg: numpy array matching data in first two parameters.
         """
         assert data.shape[:2] == avg.shape
-        vcentered = data[:,:,:,0] - avg[:,:,None,None] 
-        dcentered = data[:,:,:,1] - avg[:,:,None,None] 
+        vcentered = data[:,:,:,0] - avg[:,:,None] 
+        dcentered = data[:,:,:,1] - avg[:,:,None] 
         return vcentered,dcentered
 
+    def cast_centered_polar(self,v,d):
+        """Casts a centered virgin and dam representation to complex polar coordinates.
+        :param v: virgin trajectory, centered in order time, coordinate, part.
+        :param d: dam trajectory, centered in order time, coordinate, part.
+        """
+        v_complex =  v[:,0,:]+1j*v[:,1,:]
+        d_complex =  d[:,0,:]+1j*d[:,1,:]
+        diff_polar = np.stack([np.stack([np.abs(v_complex),np.angle(v_complex)],axis =1),np.stack([np.abs(d_complex),np.angle(d_complex)],axis = 1)],axis = -1)
+        return diff_polar
 
     def get_polar_representation(self):
-        """Gets a polar representation of the data, representing first the mean position, and 
+        """Gets a polar representation of the data, representing the mean position, and individual body part positions as derivatives off of that mean position. 
+
+        :return: outputs a tuple of the lengths and angles of average and per-part coordinates. per-part coordinates are organized as (time,coordinate [length, angle],part,mouse)
+        """
+        traj = self.load_data()
+        avg = self.get_average(traj)
+        avg_complex = avg[:,0]+1j*avg[:,1]
+        avg_polar = np.stack([np.abs(avg_complex),np.angle(avg_complex)],axis = -1)
+        v,d = self.get_centered(traj,avg)
+        diff_polar = self.cast_centered_polar(v,d)
+
+        return avg_polar,diff_polar
+        
+    def angular_distances(self,angles):
+        """Given an array of shape (time,body part,mouse), returns the an array of distance matrices, containing the distance angle between all of their parts pairwise, per time point. 
 
         """
+        angles_flat = np.concatenate([angles[:,:,0],angles[:,:,1]],axis = -1)
+        dists = np.mod(np.abs(angles_flat[:,:,None]-angles_flat[:,None,:]),2*np.pi)
+        return dists
+
+
+    def angular_eig(self,matrices,k= None):
+        """Given an array of distance matrices, calculated their eigenvalue spectra.  
+
+        :param matrices: a numpy array of dimension (frame,mat1,mat2) containing a collection of distance matrices (assumed symmetric)
+        :param k: (optional) if given, will return the top k eigenvalues and eigenvectors, ordered by magnitude.
+        """
+        w,v = np.linalg.eigh(matrices)
+        if k is None:
+            return w,v
+        else:
+            assert k > 0
+            assert type(k) == int
+            return w[:,-k:],v[:,:,-k:]
+        
+
+    def get_classification_features(self,v = None):
+        """Get features that we will use to find and classify points where there are errors in the trajectory.
+        """
+        if v is None:
+            avg,diff = self.get_polar_representation()
+            angles = diff[:,1,:,:]
+            dir_matrices = self.angular_distances(angles)
+            w,v = self.angular_eig(np.cos(dir_matrices))
+        ## Now get the sign function of the largest eigenvector:
+        sign_largest = np.sign(v[:,:,-1])
+        ## Also get the eigenvalue density spectrum.
+        ## Now we need a set of conditions to identify when things are working as expected. 
+        ## 1) the sign vector should perfectly match the expected identity assignment.
+        
+        return sign_largest
+ 
+    def classify_errors(self,v = None):
+        """ This is a three way classification: 0: no errors. 1: one point switched/missing. 2: one mouse missing.
+        """
+        sign,w = self.get_classification_features(v)
+        classification_vec = np.array([*np.ones(5)*-1,*np.ones(5)])
+        score = np.dot(sign,classification_vec)
+
+
+        #self.fit_gmm(aligndir_vecs)
 
 
 

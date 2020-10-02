@@ -3,12 +3,14 @@ import os
 import numpy as np
 import pytest
 import pathlib
+import matplotlib.pyplot as plt
 #from botocore.stub import Stubber
 from social_pursuit.data import PursuitTraces,Polar#PursuitVideo,PursuitTraces,s3_client,transfer_if_not_found
 import social_pursuit.data
 
 test_raw1= "TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat"
 test_raw2= "TempTrial2roi_2cropped_part6DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat"
+test_fixture = "TempTrial2roi_2cropped_part2fixture.mat"
 
 output_dir = pathlib.Path("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/tempdir")
 
@@ -349,27 +351,100 @@ class Test_PursuitTraces_kinematics():
 
 class TestPolar():
     def test_Polar(self):
-        datapath = os.path.join(output_dir,test_raw1)
+        datapath = os.path.join(output_dir,test_fixture)
         data = Polar(datapath)
 
     def test_Polar_wrongpath(self):
-        datapath = os.path.join(output_dir,test_raw1,".py")
+        datapath = os.path.join(output_dir,test_fixture,".py")
         with pytest.raises(AssertionError):
             data = Polar(datapath)
 
     def test_Polar_load_data(self):
-        datapath = os.path.join(output_dir,test_raw1)
+        datapath = os.path.join(output_dir,test_fixture)
         data = Polar(datapath)
         traj = data.load_data()
-        assert traj.shape == (72000,2,5,2)
+        assert traj.shape == (10,2,5,2)
 
 
-    def test_Polar_get_polar_average(self):
-        datapath = os.path.join(output_dir,test_raw1)
+    def test_Polar_get_average(self):
+        datapath = os.path.join(output_dir,test_fixture)
         data = Polar(datapath)
         traj = data.load_data()
-        avg = data.get_polar_average(traj)
-        assert avg.shape == (72000,2)
+        avg = data.get_average(traj)
+        assert avg.shape == (10,2)
+
+    def test_Polar_get_centered(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        traj = data.load_data()
+        avg = data.get_average(traj)
+        v,d = data.get_centered(traj,avg)
+        assert v.shape == (10,2,5)
+        assert d.shape == (10,2,5)
+
+    def test_Polar_get_polar_representation(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        avg,diff = data.get_polar_representation()
+        print(diff.shape)
+        assert diff.shape == (10,2,5,2)
+        assert avg.shape == (10,2)
+        
+    def test_Polar_angular_distances(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        avg,diff = data.get_polar_representation()
+        angular = diff[:,1,:,:]
+        print(datapath)
+        print(avg[0,:])
+        dists = data.angular_distances(angular)
+        assert np.all(2*np.pi >=dists)
+        for i in range(10): 
+            for j in range(10):
+                assert dists[0,i,j] == dists[0,j,i]
+
+    def test_Polar_angular_eig(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        avg,diff = data.get_polar_representation()
+        angular = diff[:,1,:,:]
+        dists = data.angular_distances(angular)
+        w,v = data.angular_eig(dists)
+        assert w.shape == (10,10)
+        assert v.shape == (10,10,10)
+
+    def test_Polar_angular_eig_top_k(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        avg,diff = data.get_polar_representation()
+        angular = diff[:,1,:,:]
+        dists = data.angular_distances(angular)
+        w,v = data.angular_eig(dists,k = 1)
+        assert w.shape == (10,1)
+        assert v.shape == (10,10,1)
+
+    def test_Polar_get_classification_features(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        avg,diff = data.get_polar_representation()
+        angular = diff[:,1,:,:]
+        dists = data.angular_distances(angular)
+        w,v = data.angular_eig(np.cos(dists))
+        assert np.all(data.get_classification_features() == np.sign(v[:,:,-1]))
+
+    def test_Polar_get_classification_features_given(self):
+        datapath = os.path.join(output_dir,test_fixture)
+        data = Polar(datapath)
+        avg,diff = data.get_polar_representation()
+        angular = diff[:,1,:,:]
+        dists = data.angular_distances(angular)
+        w,v = data.angular_eig(np.cos(dists))
+        signed = data.get_classification_features(v)
+
+        assert np.all(signed == np.sign(v[:,:,-1]))
+
+    def test_Polar_classify_errors(self):
+        pass
 
 
 #def test_load_spec():
