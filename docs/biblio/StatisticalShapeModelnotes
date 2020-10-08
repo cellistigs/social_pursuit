@@ -1,0 +1,10 @@
+## 
+Statistical shape models are a computational approach to mophology. It is an approach that originates from the image processing literature. It appears that there are a few different approaches to statistical shape modeling:
+1) Key points. I don't know much about this beyond what is discussed in Neumann et al. 1998. 
+2) Fourier descriptors. This is the formal name given to the idea of casting 2-D contours to complex space and treating them as periodic signals. This idea is useful because it naturally captures many of the invariances of the contour in useful and easy to interpret ways.  
+The idea is that once one has found a good representation in shape space, one can characterize the set of plausible shapes with tools like PCA. Furthermore, there have been truly interesting attempts to include images and human labeled points in the task of finding optimal image shapes (all in Neumann et al. 1998.) All of this seems immensely helpful for the kinds of image processing that we would like to do, both at the level of image denoising, and at higher levels of understanding behavior, where this would serve as a very lightweight form of image processing. 
+
+Important questions: 
+1) how does this factor into our existing processing methods? This gives us a lightweight way to plug back into images when necessary to estimate animal contours.  
+2) These contours are fundamentally the things that we care about for this research, not the localization of particular animal parts. 
+3) how does this relate to work in generative modeling? Is it useful to think about generative models that have an explicit shape model to move against a static background?
