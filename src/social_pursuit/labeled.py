@@ -7,11 +7,69 @@ import numpy as np
 import scipy
 import pandas as pd
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+from skimage.filters import threshold_yen,try_all_threshold,gaussian,median
+from skimage.morphology import binary_closing,binary_opening,remove_small_holes
+from skimage.segmentation import watershed
+from skimage import measure
+from skimage import color
+from social_pursuit.data import mkdir_notexists
+from scipy import ndimage as ndi
 import os,sys
 import tqdm
+import json
 
+class LineSelector():
+    """Class to draw lines via click and drag. 
+
+    """
+    def __init__(self,fig):
+        self.fig = fig
+        self.lines = [] 
+        self.press = None
+    
+
+    def connect(self):
+        """
+        Connect to required mpl events
+        """
+        self.cidpress = self.fig.canvas.mpl_connect(
+            'button_press_event', self.on_press)
+        self.cidrelease = self.fig.canvas.mpl_connect(
+            'button_release_event', self.on_release)
+
+    def disconnect(self):
+        """Disconnect from required mpl events
+
+        """
+        self.fig.canvas.mpl_disconnect(self.cidpress)
+        self.fig.canvas.mpl_disconnect(self.cidrelease)
+
+    def on_press(self,event): 
+        self.press = [np.round(event.xdata),np.round(event.ydata)]
+
+    def on_release(self,event): 
+        end = [np.round(event.xdata),np.round(event.ydata)]
+        line = self.interpolate(np.array(self.press),np.array(end))
+        self.press = None
+
+        self.lines.append(line)
+
+    def interpolate(self,p1,p2):
+        print(p1,p2,"p1,p2")
+        length = int(np.linalg.norm(p1-p2))
+        spacing = np.linspace(p1,p2,length).astype(int)
+        return spacing
+
+    def get_lines(self):
+        return self.lines
+
+    def get_all_points(self):
+        """Collapse all lines into a flat list of points.
+
+        """
+        all_lines = np.concatenate(self.lines,axis = 0)
+        return all_lines.tolist()
 
 class LabeledData(object):
     """An object to deal with trained label poses. Useful to calculate statistics on the training data, simulate from the training data for validation datasets, etc.  
@@ -46,6 +104,15 @@ class LabeledData(object):
         parts = np.split(micestack,np.arange(2,10,2),axis =1) 
         partstack = np.stack(parts,axis = -2)
         return partstack
+
+    def get_dataarray_nonan(self):
+        """Get just the part of the data that does not have nans.
+
+        """
+        nans = np.where(np.isnan(self.dataarray))[0]
+        nantimes = np.unique(nans)
+        notnan = [i for i in np.arange(len(self.dataarray)) if i not in nantimes]
+        return self.dataarray[np.array(notnan),:,:,:]
 
     def set_cropping(self,xmin,xmax,ymin,ymax):
         """
@@ -304,23 +371,68 @@ class LabeledData(object):
         samples_raw[:,:,:,1:]+=displacement[:,:,None,:]
         return samples_raw
     
-    def switch_points(dataset,indices,p):
+    def switch_points(self,dataset,indices,p):
         """Given a sampled dataset of shape (n,coordinate,part,mouse), switches p randomly selected body parts at each index with the corresponding body part on the other animal.
 
         """
-        pass
+        #fig,ax = plt.subplots(2,1,sharex = True,sharey = True)
+        to_switch = np.array([np.repeat(np.random.choice(5,p,replace = False),2) for i in indices])
+        partarray = np.stack([indices]*2*p,axis = -1)
+        #ax[0].plot(dataset[indices[0],0,:,0],dataset[indices[0],1,:,0],"bx")
+        #ax[0].plot(dataset[indices[0],0,:,1],dataset[indices[0],1,:,1],"rx")
+        animalarray = np.stack([np.array([0,1]*p)]*len(indices),axis = 0)
+        print(to_switch[0],animalarray[0],partarray[0])
+        dataset[partarray,:,to_switch,animalarray] = dataset[partarray,:,to_switch,np.fliplr(animalarray)]
+        #ax[1].plot(dataset[indices[0],0,:,0],dataset[indices[0],1,:,0],"bo")
+        #ax[1].plot(dataset[indices[0],0,:,1]+0.5,dataset[indices[0],1,:,1]+0.5,"ro")
+        #fig.savefig("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/tempdir/flipimage")
 
-    def remove_animal(dataset,indices):
+        return dataset
+
+    def steal_points(self,dataset,indices,p):
+        """Given a sampled dataset of shape (n,coordinate,part,mouse), steals p randomly selected body parts at each index from one animal, and assigns to the corresponding body part on the other animal.
+
+        """
+        #fig,ax = plt.subplots(2,1,sharex = True,sharey = True)
+        to_switch = np.array([np.random.choice(5,p,replace = False) for i in indices])
+        partarray = np.stack([indices]*p,axis = -1)
+        #ax[0].plot(dataset[indices[0],0,:,0],dataset[indices[0],1,:,0],"bx")
+        #ax[0].plot(dataset[indices[0],0,:,1],dataset[indices[0],1,:,1],"rx")
+        stealing = np.random.choice(2)
+        animalarray = np.array([np.repeat(stealing,p) for i in indices])
+        #animalarray = np.stack([np.array([0,1]*p)]*len(indices),axis = 0)
+        dataset[partarray,:,to_switch,np.abs(1-animalarray)] = dataset[partarray,:,to_switch,animalarray]
+        #ax[1].plot(dataset[indices[0],0,:,0],dataset[indices[0],1,:,0],"bo")
+        #ax[1].plot(dataset[indices[0],0,:,1]+0.5,dataset[indices[0],1,:,1]+0.5,"ro")
+        #fig.savefig("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/tempdir/flipimage")
+
+        return dataset
+        
+
+
+    def remove_animal(self,dataset,indices):
         """Given a sampled dataset of shape (n,coordinate,part,mouse), removes the detetions for one of the animals, and substitutes in a jittered version of the other animal. 
 
         """
-        pass
+        to_switch = np.array([np.arange(5) for i in indices])
+        partarray = np.stack([indices]*5,axis = -1)
+        #ax[0].plot(dataset[indices[0],0,:,0],dataset[indices[0],1,:,0],"bx")
+        #ax[0].plot(dataset[indices[0],0,:,1],dataset[indices[0],1,:,1],"rx")
+        stealing = np.random.choice(2)
+        animalarray = np.array([np.repeat(stealing,5) for i in indices])
+        #animalarray = np.stack([np.array([0,1]*p)]*len(indices),axis = 0)
+        dataset[partarray,:,to_switch,np.abs(1-animalarray)] = dataset[partarray,:,to_switch,animalarray]
+        return dataset
 
 ## Done with sampling. Now consider image statistic functions:
 ## We assume that if all of the data folders are not subfolders in the current
 ## directory, that they are at least packaged together.
 
     def get_images(self,indices):
+        """Gets the images at indicated indices as numpy arrays. 
+
+        :param indices: Numpy array of indices corresponding to training data.
+        """
         imagenames = self.get_imagenames(indices)
         ## Check if the images are somewhere else:
         if self.additionalpath is None:
@@ -330,6 +442,34 @@ class LabeledData(object):
 
         ## Now we will load the images:
         images = [plt.imread(image) for image in imagenames]
+
+        return images
+
+    
+    def convert_images_grayscale(self,images):
+        """Converts images at indicated indices to grayscale (planar numpy arrays)
+
+        :param images: list of images to convert to grayscale 
+        """
+        ## Now we will load the images:
+        gimages = [color.rgb2gray(image) for image in images]
+
+        return gimages
+    
+    def get_images_grayscale(self,indices):
+        """Gets the images at indicated indices as grayscale (planar numpy arrays)
+
+        :param indices: Numpy array of indices corresponding to training data.
+        """
+        imagenames = self.get_imagenames(indices)
+        ## Check if the images are somewhere else:
+        if self.additionalpath is None:
+            pass
+        else:
+            imagenames = [self.additionalpath+img for img in imagenames]
+
+        ## Now we will load the images:
+        images = [color.rgb2gray(plt.imread(image)) for image in imagenames]
 
         return images
 
@@ -358,6 +498,7 @@ class LabeledData(object):
 
             all_clipped[i,:,:,:] = (np.round(255*clip)).astype(np.uint8)
         return all_clipped
+
     ## Calculate image histograms over all frames
     def patch_grandhist(self,frames,part,radius):
         dataarray = self.make_patches(frames,part,radius)
@@ -369,3 +510,330 @@ class LabeledData(object):
         dataarray = self.make_patches(frames,part,radius)
         hists = [[np.histogram(dataarray[f,:,:,i],bins = np.linspace(0,255,256)) for i in range(3)]for f in range(len(frames))]
         return hists
+
+    ## More serious computer vision 
+    def binarize_frames(self,indices):
+        """Binarize the frames at the given set of indices. Use Yen's method for thresholding (selected from visual examination of test frames). Yen's method selected based on: 
+        .. highlight:: python
+        .. code-block:: python
+            from skimage.threshold import try_all_threshold            
+            fig, ax = try_all_threshold(img, verbose=False)
+            plt.show()
+        '''
+
+        :param indices:
+        """
+        frames = self.get_images_grayscale(indices)
+        ## If including the registration frame, its value is not that good for the segmetnation of mice because it includes too much other garbage. Use the mean of the other thresholds instead.
+        diff = np.diff(indices)
+        assert np.all(diff>0),"please give indices in increasing order."
+        include_registration_frame = (0 in indices)
+        binarized = []
+        threshes = []
+        for i,image in enumerate(frames[::-1]):
+            if i == len(frames)-1 and include_registration_frame:
+                thresh = np.mean(threshes)
+            else:
+                thresh = threshold_yen(image)- 0.05
+                threshes.append(thresh)
+            binarize = image<thresh
+            binarized.append(binarize)
+        return binarized[::-1]
+
+    def clean_binary(self,binaries):
+        """Given a set of binarized images, clean them up with morphological opening. 
+
+        :param binaries: a list of binary images that represent the training data. Note that the animal should be assigned to ONE, not 0, meaning we should use morphological closing (dilation followed by erosion.)   
+        """
+        cleaned = []
+        for image in binaries:
+            opened = binary_opening(image)
+            closed = binary_closing(opened)
+            cleaned.append(closed)
+        return cleaned
+
+    def link_parts(self,poses):
+        """Given two numpy arrays representing the (part,coordinate) locations of both animals, will return two corresponding arrays of the parts connecting them. 
+
+        :param poses: the (part,coordinate) array representing the body parts of a given animal. We will link the three head points, the ears to centroid, and the centroid to tail. We will also include a crossbar across the centroid, parallel to the position of the earsto help distinguish the bodies of the two animals.
+        """
+        get_length = lambda p1,p2: int(np.linalg.norm(p1-p2))
+        get_spacing = lambda p1,p2: np.linspace(p1,p2,get_length(p1,p2)).astype(int)
+        tl = get_spacing(poses[0,:],poses[1,:])
+        tr = get_spacing(poses[0,:],poses[2,:])
+        lr = get_spacing(poses[1,:],poses[2,:])
+        midpointlr = np.mean(lr,axis = 0).astype(int)
+        midpointlrc = ((midpointlr+poses[3,:])/2).astype(int)
+        tc = get_spacing(poses[0,:],poses[3,:])
+        ci = get_spacing(poses[3,:],poses[4,:])
+        cb = (1.5*(lr - midpointlr) + poses[3]).astype(int)
+        cbm = (1.5*(lr - midpointlr) + midpointlrc).astype(int)
+        return np.concatenate([tl,tr,lr,tc,ci,cb,cbm],axis = 0)
+
+
+    def generate_auxpoints(self,index,to_edit,dryrun = False):
+        """Generate auxiliary tracking points that we can unequivocally assign to each animal for difficult to segment frames. 
+
+        :param index: the index in the training set of the data you would like to label. 
+        :param dryrun: boolean; if True, skips the actual plotting for testing purposes.
+        :param to_edit: list of strings, should be dam, virgin, or both
+        """
+        for entry in to_edit: 
+            assert entry in ["dam","virgin"]
+        colors = {"virgin":"blue","dam":"red"}
+        pointarray = {e:[] for e in to_edit} 
+
+        if dryrun:
+            pointarray_default = {"dam":[[0,0],[1,1]],"virgin":[[4,4],[40,40]]}
+
+        else:
+            for entry in to_edit:
+                fig,ax = plt.subplots()
+                ax.imshow(self.get_images([index])[0])
+                linem = LineSelector(fig)
+                linem.connect()
+                plt.title("Auxiliary points for {}".format(entry))
+                plt.show()
+                pointarray[entry].extend(linem.get_all_points())
+                
+            fig,ax = plt.subplots()
+            ax.imshow(self.get_images([index])[0])
+            for k,vals in pointarray.items():
+                valarray = np.array(vals)
+                ax.plot(valarray[:,0],valarray[:,1],"x",color = colors[k],label = k)
+                plt.title("Given Marker Points")
+                plt.legend()
+            plt.show()
+        return pointarray
+
+    def save_auxpoints(self,improvement_dict,foldername):
+        """Given a dictionary of indices and corresponding animal indentities to generate improvements for, saves out individual dictionaries corresonding to each frame in a provided subfolder. 
+
+        :param improvement_dict: a dictionary with keys providing the indices at which we should generate refinements, and values providing a list of the animals we should provide refinements for (a list with entries of virgin, dam or both). 
+        :param foldername: a string giving the subfolder we should save out the auxiliary points to. 
+        """
+        savepath = os.path.join(self.additionalpath,foldername)
+        mkdir_notexists(savepath)
+
+        for ind,l in improvement_dict.items():
+            assert type(ind) is int,"indices must be integers"
+            for li in l:
+                assert li in ["virgin","dam"]
+            print(ind,l)
+            auxpoints = self.generate_auxpoints(ind,l)
+            filename = "dict_index_{}".format(ind)
+            with open(os.path.join(savepath,filename),"w") as f:
+                json.dump(auxpoints,f,indent = 4)
+    
+    def get_auxpoints(self,folderdict):
+        """Given a dictionary of folder paths and values the corresponding training frame indices, retrieve all of the auxiliary points.
+        :param folderdict: dictionary with foldernames as keys and lists of indices as values.
+        :return: a dictionary with indices as keys and auxiliary point dictionaries as values.  
+        """
+        returndict = {}
+        for folder,points in folderdict.items():
+            for point in points:
+                with open(os.path.join(self.additionalpath,folder,"dict_index_{}".format(point)),"r") as f:
+                    datadict = json.load(f)
+                returndict[point] = datadict
+        return returndict
+
+    def segment_animals(self,binary,vposes,dposes,auxpoints = None):
+        """If animals are touching, separate them with distance transform.
+
+        :param binary: A numpy array representing a binarized image.
+        :param vposes: A numpy array (coordinate,part) representing the virgin's position in this frame (standard part ordering)
+        :param mposes: A numpy array (coordinate,part) representing the dam's position in this frame (standard part ordering)
+        :return: An integer valued image where 0 represents the background, 1 represents the virgin and 2 represents the dam., as well as an array of the markers used to initialize the watershed algorithm.
+        """
+        assert vposes.shape[0] == dposes.shape[0] == 2, "part arrays must be given as (coordinate,part)"
+        if auxpoints is not None:
+            for k,val in auxpoints.items():
+                valarray = np.array(val)
+                assert k in ["dam","virgin"]
+                assert valarray.shape[-1] == 2 
+        vpint = vposes.astype(int)
+        vpinterp = self.link_parts(vpint.T)
+        dpint = dposes.astype(int)
+        dpinterp = self.link_parts(dpint.T)
+        allinterp = {"virgin":vpinterp,"dam":dpinterp}
+        if auxpoints is not None:
+            for k,val in auxpoints.items():
+                allinterp[k] = np.concatenate([allinterp[k],np.array(val).astype(int)],axis = 0)
+
+        distance = ndi.distance_transform_edt(binary)
+        markers = np.zeros_like(distance)
+        for ki,k in enumerate(["virgin","dam"]):
+            markers[allinterp[k][:,1],allinterp[k][:,0]] = ki +1 
+
+        labels = watershed(-distance,markers,mask = binary)
+        return labels,markers
+
+    def smooth_segmentation(self,segmentation,sigma = 0.7):
+        """ Calculates a gaussian blur about the detected segmentation and then thresholds in order to smooth out the edges pleasantly. 
+        :param segment: binarized image indicating the value of the virgin mouse encoded at value 1, and the value of the dam encoded at value 2. 
+        :returns: return a (imagedim1,imagedim2, 2) dimensional array, with the last index giving the position of either animal.
+        """
+
+        output = np.zeros((*segmentation.shape,2))
+
+        for i in [1,2]:
+            mouseimage = (segmentation == i)
+            ## Sigma chosen arbitrarily
+            smoothed = gaussian(mouseimage,sigma = sigma)
+            image_th = threshold_yen(smoothed)
+            thresholded = smoothed > image_th
+            deholed = remove_small_holes(thresholded,area_threshold = 50)
+            output[:,:,i-1] = median(mouseimage,np.ones((5,5)))
+            #output[:,:,i-1] = deholed
+        return output
+
+
+    def get_contour_from_seg(self,segment):
+        """Converts a detected segmentation image into a contour
+
+        :param segment: np array of shape (imagedim1,imagedim2,2), representing a stack of binarized images indicating the locations of each mouse. 
+        :return contours: a list of lists representing the contours for each mouse (should only be 2)
+        """
+        contours = [measure.find_contours(segment[:,:,i],0.5) for i in range(2)]
+        return contours 
+ 
+    def get_contour(self,indices,auxpoints_trained = {}):
+        """ TODO write test for this! Get the pair of contours that aligns best with the detected animal points in each frame.
+
+        :param indices: numpy array of the frame indices in the training set for which you want contours
+        """
+        binary = self.binarize_frames(indices)
+        cleanbinary = self.clean_binary(binary)
+        all_contours = []
+        for ii,i in enumerate(indices):
+            binim = cleanbinary[ii]
+            vdata = self.dataarray[i,:,:,0]
+            ddata = self.dataarray[i,:,:,1]
+            if auxpoints_trained.get(i,False):
+                labels,markers = self.segment_animals(binim,vdata,ddata,auxpoints = auxpoints_trained[i])
+            else:
+                labels,markers = self.segment_animals(binim,vdata,ddata)
+            smoothed = self.smooth_segmentation(labels)
+            contours = self.get_contour_from_seg(smoothed)
+            all_contours.append(contours)
+            
+        return all_contours
+
+    def get_contour_fourier_rep(self,contourdict):
+        """Get a fourier coefficient representation of animal contours 
+
+        :param contourdict: a dictionary with keys giving training frame indices and values giving the corresponding contours. 
+        :return: dictionary with keys giving training frame indices and values giving the fourier representation of corresponding contours.
+        """
+        dictentries = {}
+        for c,centry in contourdict.items():
+            mouseentries = {"virgin":{},"dam":{}}
+            for mi,m in enumerate(mouseentries):
+                ccomplex = centry[mi][0][:,0]+1j*centry[mi][0][:,1] #take the 0th entry. Fix this upstream later. 
+                cfft = np.fft.fft(ccomplex)
+                freqs = np.fft.fftfreq(len(ccomplex),30)## assuming all videos are at 30 fps.
+                mouseentries[m] = {"coefs":cfft,"freqs":freqs}
+            dictentries[c] = mouseentries
+        return dictentries
+    
+    def find_startpoint(self,fourierdict,tips,cents):
+        """Find the point on the contour to assign as t = 0. We would like this to be as close as possible to the mouse's nose tip for consistency. 
+
+        :param fourierdict: a dictionary with entries for the virgin and dam, containing the fourier coefficients and corresponding frequencies for both. 
+        :param tips: a numpy array of shape (coordinate, mouse) giving the nose tip points for each mouse
+        :param cents: a numpy array of shape (coordinate, mouse) giving the centroid points for each mouse
+        """
+        rotdict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            rotdict[key] = fourierdict[key]
+            coefficients = fourierdict[key]["coefs"]
+            n = len(coefficients)
+            ## The starting point of the curve is given by the sum of all the fourier coefficients (t = 0 => e^{-tik} = 1)
+            rot_coefs = lambda b: coefficients*np.exp(2*np.pi*1j*b*np.linspace(0,n-1,n)/n)
+            diff_init = lambda b: np.sum(rot_coefs(b))/n
+            ## Measure the distance between different potential 
+            dists = lambda b: np.abs(diff_init(b) - (tips[0,keyind]+1j*tips[1,keyind]))
+            #dists = lambda b: np.linalg.norm(np.array([np.real(diff_init(b)),np.imag(diff_init(b))]) - tips[:,keyind])
+            distvals = map(dists,np.linspace(0,n-1,n))
+            z = np.argmin(list(distvals))
+            rotdict[key]["coefs"] = rot_coefs(z) 
+            ## Checking framework
+            #for bi in np.linspace(0,n-1,n):
+
+            #    init = diff_init(bi)
+            #    x = np.real(init)
+            #    y = np.imag(init)
+            #    if bi == z:
+            #        plt.plot(y,x,"x")
+            #    else:
+            #        pass
+            #plt.plot(*tips[:,keyind],"o")
+            #plt.plot(*cents[:,keyind],"o")
+            #ci = np.fft.ifft(coefficients)
+            #xci = np.real(ci)
+            #yci = np.imag(ci)
+            #plt.plot(yci,xci,"+")
+            #plt.show()
+
+        return rotdict 
+
+    def center_contour(self,fourierdict,cents):
+        """Center the fourier contours at the corresponding mouse centroid point. This will involve getting the dc component of the fourier representation, subtracting off the markered centroid position, and converting back. 
+        
+        :param fourierdict: a dictionary with entries for the virgin and dam, containing the fourier coefficients and corresponding frequencies for both. 
+        :param cents: a numpy array of shape (coordinate, mouse) giving the centroid points for each mouse
+        """
+        centdict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            centdict[key] = fourierdict[key]
+            coefficients = fourierdict[key]["coefs"]
+            ## The DC component is always first:
+            dc = coefficients[0]
+            cent = cents[:,keyind]
+            complexcent = (cent[1]+1j*cent[0])*len(coefficients)
+            newdc = dc-complexcent
+            centdict[key]["coefs"][0] = newdc
+        return centdict
+
+    def rotate_contour(self,fourierdict,tips,cents):
+        """
+        :param fourierdict: a dictionary with entries for the virgin and dam, containing the fourier coefficients and corresponding frequencies for both. 
+        :param tips: a numpy array of shape (coordinate, mouse) giving the nose tip points for each mouse
+        :param cents: a numpy array of shape (coordinate, mouse) giving the centroid points for each mouse
+        """
+        ## Get angle between tips and centroids for both animals (NOTE: THIS SHOULD BE Y-X order to match coordinates for images.)
+        dirvec = tips-cents
+        compdirvec = dirvec[1,:]+1j*dirvec[0,:]
+        mouseangles = np.angle(compdirvec)
+        aligndict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            aligndict[key] = fourierdict[key]
+            coefficients = fourierdict[key]["coefs"]
+            rotfactor = np.exp(np.pi/2*1j-1j*mouseangles[keyind])
+            rotated = coefficients*rotfactor
+            aligndict[key]["coefs"] = rotated
+
+        return aligndict
+
+
+    def center_and_rotate_fourier_rep(self,fourierdict):
+        """Given a set of fourier coefficent representations for animal contours, centers them to the centroid point, and rotates them so that the tip of the nose is facing straight up. References the detected training points to do this transformation.
+
+        :param fourierdict: dictionary with keys giving training frame indices and values giving the fourier representation of corresponding contours.
+        """
+        dictentries = {}
+        for f,fentry in fourierdict.items():
+            ## Get training data: 
+            points = self.dataarray[f,:,:,:]
+            tips = points[:,0,:]
+            cents = points[:,3,:]
+            ## Get the x-y coordinates of the 
+            self.find_startpoint(f,tips,cents)
+
+    def get_shape_statistics(self,fourierdict):
+        pass
+
+    def get_multivariate_pose_distribution(self,fourierdict):
+        pass
+
