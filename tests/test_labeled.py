@@ -378,6 +378,23 @@ class Test_LabeledData():
         plt.show()
         plt.savefig(os.path.join(output_dir,"test_LabeledData_rotate_contour.png"))
 
+    def test_LabeledData_center_and_rotate_fourier_rep(self):
+        data = LabeledData(labeled_data,additionalpath)
+        dictentries = joblib.load(os.path.join(fixture_dir,"test_contours"))
+        contourdict = {i:dictentries[i] for i in range(len(dictentries))}
+        contourfs = data.get_contour_fourier_rep(contourdict)
+        ind = 0
+        contourf = contourfs[ind]
+        tips = data.dataarray[ind,:,0,:]
+        cents = data.dataarray[ind,:,3,:]
+        orig_contour = np.fft.ifft(contourf["dam"]["coefs"])
+        plt.plot(np.real(orig_contour),np.imag(orig_contour))
+        normedf = data.center_and_rotate_fourier_rep(contourdict)
+        new_contour = np.fft.ifft(normedf[ind]["dam"]["coefs"])
+        plt.plot(np.real(new_contour),np.imag(new_contour))
+        plt.show()
+        
+
 class Test_LineSelector():
     def test_LineSelector(self):
         fig,ax = plt.subplots()

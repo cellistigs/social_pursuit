@@ -1,6 +1,7 @@
 ## What happens if we represent our movement data in a hierarchical polar coordinate set? Does this make analysis/denoising easier?
 import os 
 import numpy as np
+from social_pursuit.data import Polar
 from scipy.io import loadmat
 from script_doc_utils import initialize_doc,insert_image,save_and_insert_image,get_relative_image_path
 import matplotlib.pyplot as plt
@@ -14,11 +15,13 @@ plt.rcParams.update({
 })
 from script_doc_utils import initialize_doc,insert_image,get_relative_image_path
 
+datapath = os.path.join("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat")
+
 if __name__ == "__main__":
     md = initialize_doc()
     md.new_header(level = 1,title = "Summary")
     md.new_paragraph("This script explains idea for a new way of representing our dataset using a hierarchical polar representation. This idea is in part inspired by the literature from robotics (think of linkage models). The representation works as follows: First, take the average of all detected mouse body parts. This should be a point between the body parts of both animals. We will represent this average point in polar coordinates. Now, the positions of individual body parts can be recovered relative to this average point, again in polar coordinates. See below, where we give the representation of the centroid coordinates only:")
-    data = loadmat(os.path.join("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat"))
+    data = loadmat(datapath)
     start = 15000
     end = 15500
     vtraj_sample = data["virgin_centroid_traj"][start:end]
@@ -84,6 +87,12 @@ if __name__ == "__main__":
     md.new_header(title = "Error detection and Reconstruction",level = 2)
     md.new_paragraph("We need a good policy to handle errors in the raw DLC tracking data. This policy should distinguish error cases where we have switches from those where we have completely lost the position of an animal, and treat them differently. Let's first come up with a classifier that determines when traces are clean, when there are switches, and when an animal is wholly missing.")
     plt.hist(all_angles[0,:])
+    plt.show()
+    polar = Polar(datapath)
+    avg,diff = polar.get_polar_representation()
+    all_angles=np.concatenate([diff[10000:20000,1,:,0],diff[10000:20000,1,:,1]],axis = 1)
+    plt.imshow(all_angles,cmap = "twilight",aspect = 0.002)
+    plt.colorbar()
     plt.show()
 
     md.create_md_file()
