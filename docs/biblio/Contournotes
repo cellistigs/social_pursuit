@@ -1,0 +1,28 @@
+## A review of the current state of the art for methods in contour detection. 
+
+## Text from material sent to John: 
+    "The 90s literature on applying fourier descriptors puts a lot of weight on the problem of finding and characterizing deformable objects in biomedical imaging data. Kashi et al. 1996 use Fourier descriptors (and wavelet descriptors) to the analysis of corpus callosum shapes between left and right handed inviduals. They describe the utility of these representations to creating average shapes. Staib and Duncan 1992 use Fourier Descriptors to look for objects of a certain shape in an image. They develop intuition for fourier descriptors as ellipses, and a correspondingly intuitive parametrization, then fit boundary templates to brain scan images using a gaussian model and MAP inference. Neumann and Lorenz 1998 consider the eigenspace of fourier description features, creating low dimensional representations of shape from a training set of biomedical images. They then use these representations along with gradient information from the image to fit objects in other images through an iterative, interactive process: First, the algorithm automatically selects a representation in PCA space that fits well to edged detected in the image. Then, the user indicates points that should be included on the boundary described by fourier features, leading to refinement."
+    "In addition to finding and characterizing static objects, fourier descriptors have also been used to characterize movement sequences in humans and other organisms. Ling et al. 2007 compute sequences of fourier descriptors on human silhouettes to classify actions, either through hausdorff metric based methods or by fitting an HMM to the top frequency components of the fourier descriptor signal. Wang et al. 2008 attempt to learn subspaces of shape features using Kernel Locality Preserving Projections (KLPP) with a gaussian kernel to classify silhouette sequences. Finally, Dugamarti et al. 2019 applied Fourier Descriptor methods to the analysis of soft robots (tentacles, robots with inflatable cavities, etc), and showed the ability of PCA based methods to distinguish periodicity in complex deformation, as well as the quantitative comparison of dynamic shape trajectories by projecting the PCA weights from one shape sequence into the eigenspace of another."
+
+## Notes from Gong et al. 2018:
+# Four different general approaches to contour detection 
+# 1. Pixel based approach. Determines if each pixel belongs to a contour according to extracted features. 
+# 2. Edge based approach. Detects edges, then groups edge fragments to create contours. 
+# 3. Region based approach. Detects interesting regions, and takes contours as the boundaries of these regions. 
+# 4. Deep networks. 
+# 1-3 are in order of increasing dimensionality.
+#
+# Pixel based appraches: use of local filters to detect things like grayscale gradient magnitude. Nonlinear filters as well: the quadratic filters.
+# Consider brain-inspired filters (V1)
+#
+# Also consider an approach that combines intensity gradients with color and texture (?) gradients, to get a probabilitistic detector called Pb. Various groups have improved upon this basic probabilistic approach. In order to incorporate global information, people have used spectral graph theory to explore the role of global information: construct an affinity matrix of pixel similarity, and solve a related generalized eigenvector problem. This gives regions in terms of eigenvectors. One then takes gradients of the eigenvectors to arrive at contour images.  
+#
+#
+# Edge based approaches: first detect a bunch of edges, then stitch them together.  
+#
+# Perceptual grouping: use perceptual laws to group edges together (proximity, continuity, symmetry etc. We need a good model to infer the location of fictive edges when stitching together.)
+# Active contour: snake/deformable models. Evolve a hand drawn curve by minimizing a pre-defined energy function. No reason you couldnt evolve a manually segmented curve either...
+# Region based approaches: don't worry so much about edges, but treat whole contiguous regions as the objects of interest and get out contours from those regions. Chan-Vese, GAR, diffusion snake, polar snake are all region baed methods. 
+#
+# CNN based approaches. For indivudal pixel based tasks, we can consider approaches like the fully convolutional network (FCN), converting fully connected VGG layers into convolutions. Likewise, one can use dilated convolutions, and label map refinement. Look at an example feature extractor named OverFeat. 
+# Additional approaches look at weakly annotated training data: image level vs. bounding box annotations. Separately, people have considered detection with faster rcnns. Look at Xie and Tu (HED), as well as Liu and Lew, for image level prediction, from careful annotation or from simple bounding boxes (Khoreva et al).  
