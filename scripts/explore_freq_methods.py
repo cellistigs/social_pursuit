@@ -38,7 +38,7 @@ if __name__ == "__main__":
     part = 0
     interval = [27542,27617]
     pt,analysisobj,filename = initialize_analysis_objects(experimentname,roi,part,interval,filtername)
-    md = initialize_doc()
+    md = initialize_doc({"parent":"summary_week_9_25_20"})
     md.new_header(level = 1, title = "Summary")
     md.new_paragraph("This script is meant to explore the effect of frequency based methods on the kinds of traces that we care about. It follows the approach of papers in air traffic control (Annoni et al. 2012) and ecology (Polansky et al. 2010) to apply frequency based methods to the study of real, two dimensional trajectories. This approach could complement and provide foundations for our current data analysis techniques, and gives us nice ways to characterize trajectories of different length.  We will show how to implement the fourier transform, obtain the power spectrum, and reconstruct these trajectories with a low rank approximation. All of these methods will be handled by the `social_pursuit.fft.PursuitFFT` object.")
     

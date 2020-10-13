@@ -3,7 +3,7 @@ import os
 from script_doc_utils import initialize_doc,insert_image,get_relative_image_path
 
 if __name__ == "__main__":
-    md=initialize_doc()
+    md=initialize_doc({"next":"summary_week_10_9_20"})
     md.new_header(level = 1,title = "Work summary for week of of 9/25/20")
     md.new_line("This week, we piloted some ideas across different areas in the social behavior project.")
     md.new_paragraph("1) perhaps most notably, we are considering a "+ md.new_inline_link(link ="./polar_representation.md",text = "new representation") + " of the social behavior data in a hierarchical set of polar coordinates. Briefly, at the highest level, we represent the average position of all of the detected body parts. When we can think of this as representing the average motion of the two animalsover time. At the second level, we represent the positions of the mouse body parts as _deviations_ from the average position. This representation naturally clusters the body parts of the two animals, and opens the door to more robust body part and behavior detection methods. This representation also offers more straightforward ways to characterize the dynamics of pursuit events. It will be exciting to demonstrate the possibilities of this representation on groundtruth labeled pursuit event data. For more details and current work, see "+md.new_inline_link(link = "./polar_representation.md",text = "here."))

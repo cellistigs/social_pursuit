@@ -82,7 +82,7 @@ def generate_example_frames(score,scorevec,vid,max_frames):
         print(v[inspectpoint,:,-2:])
 
 if __name__ == "__main__":
-    md = initialize_doc()
+    md = initialize_doc({"prev":"polar_representation","next":"polar_classification_validation","parent":"summary_week_10_9_20"})
     md.new_header(title = "Classification based on hierarchical polar representation",level =1)
     md.new_paragraph("Describes a multi-step classification process for detecting false/missing body parts. We start with the angle representation we showed in the "+md.new_inline_link(link = "./polar_representation.md",text = "polar representation")+" file:")
 

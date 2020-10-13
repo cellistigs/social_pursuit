@@ -28,7 +28,7 @@ if __name__ == "__main__":
     md = initialize_doc()
     md.new_header(title = "Summary",level = 1)
     md.new_paragraph("We can use the contours extracted by "+md.new_inline_link(link = "./get_statistical_shape_model.py",text = "the previous file")+" ")
-    all_contours = joblib.load("./all_contours")
+    all_contours = joblib.load("./script_data/all_contours")
     ## Assume for now that the first contour is the most representative: 
     contourdict = {i:all_contours[i] for i in range(len(all_contours))}
     ## Remove wonky looking contours for now

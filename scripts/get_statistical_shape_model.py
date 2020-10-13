@@ -25,12 +25,13 @@ datapath = os.path.join("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/TempTrial2roi_2c
 labeled_data = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/CollectedData_Taiga.h5"
 additionalpath = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/"
 
-@memory.cache 
+@memory.cache(ignore = ['md'])
 def show_pipeline_results(md,labeleddata,frameinds,auxpoints = None):
     folder = "../docs/script_docs/images/pipeline_intermediate_steps"
     mkdir_notexists(folder)
     all_labeled = []
     all_markers = []
+    all_paths = []
     for selectid,frameselect in enumerate(frameinds):
         fig,ax = plt.subplots(2,2,figsize = (20,20))
         ax[0,0].imshow(labeleddata.get_images(frameinds)[selectid])
@@ -53,14 +54,16 @@ def show_pipeline_results(md,labeleddata,frameinds,auxpoints = None):
         ax[0,1].set_title("Cleaned binarized image")
         ax[1,0].set_title("Markers for watershed.")
         ax[1,1].set_title("Segmented Image.")
-        save_and_insert_image(md,fig,path = os.path.join(folder,"image_preprocessing{}.png".format(selectid)))
+        path = save_and_insert_image(md,fig,path = os.path.join(folder,"image_preprocessing{}.png".format(selectid)))
         all_labeled.append(labeled)
         all_markers.append(markers)
-    return all_labeled,all_markers
+        all_paths.append(path)
+    return all_labeled,all_markers,all_paths
 
-@memory.cache
+@memory.cache(ignore = ['md'])
 def extract_and_save_contours(md,labeleddata,auxfolderdict,dryrun = True):
     all_contours = labeleddata.get_contour(np.arange(101),auxfolderdict)
+    all_paths = []
     folder = "../docs/script_docs/images/labeled_contours"
     mkdir_notexists(folder)
     for i,image_contours in enumerate(all_contours):
@@ -79,9 +82,11 @@ def extract_and_save_contours(md,labeleddata,auxfolderdict,dryrun = True):
         
         plt.title("Both contours at frame {}".format(i))
         plt.gca().invert_yaxis()
-        save_and_insert_image(md,fig,path = os.path.join(folder,"contourframe{}.png".format(i)))
+        path = save_and_insert_image(md,fig,path = os.path.join(folder,"contourframe{}.png".format(i)))
+        all_paths.append(path)
 
-    return all_contours
+    joblib.dump(all_contours,"./script_data/all_contours{}".format(datetime.datetime.now()))
+    return all_contours,all_paths
 
 def refine_dictpoints(refinedict,data,dryrun = False):
     if dryrun == True:
@@ -91,7 +96,7 @@ def refine_dictpoints(refinedict,data,dryrun = False):
         data.save_auxpoints(refinedict,foldername)
 
 if __name__ == "__main__":
-    md = initialize_doc()
+    md = initialize_doc({"parent":"summary_week_10_9_20","next":"from_contours_to_shape_model"})
     md.new_header(title = "Summary",level = 1)
     md.new_paragraph("We will incorporate the training data into our work through the use of a statistical shape model: a model of the contours of an object, encoded low dimensionally through fourier features. It is known that a small proportion of fourier features is sufficient to encode many contours that we may be interested in. Once we have a collection of fourier features per set of object edges, which can then be manipulated to introduce various invariances. We can then look at the covariance of different shape parameters, and create a low dimensional, statistical representation of possible object shapes. Shape models are popular in biomedical imaging data, and even old approaches have shown that it is possible to create shape models that are well constrined by both the underlying image, and user defined boundary points (Neumann et al. 1998). We will apply this framework to our DLC training data, automatically detecting animal contours with python computer vision, and build a model that is also informed by our markers.")
 
@@ -112,7 +117,9 @@ if __name__ == "__main__":
     
             
     md.new_paragraph("Now we apply the methods of watershed segmentation to our images. First we will threshold our image to create a binary mask. Then we will remove small holes and dots with morphological opening and closing. Then we will apply the watershed transform, with the skeleton shown above on the distance transform of the binary image. This procedure effectively separates the animals from the background, and from each other in most cases. For more info on the watershed transform, see "+md.new_inline_link(link = "https://scikit-image.org/docs/dev/auto_examples/segmentation/plot_watershed.html",text = "here."))
-    all_labeled,all_markers = show_pipeline_results(md,data,frameinds)
+    all_labeled,all_markers,all_figpaths = show_pipeline_results(md,data,frameinds)
+    [insert_image(md,f) for f in all_figpaths]
+
     selectid = 1
     labeled = all_labeled[selectid]
     md.new_paragraph("We achieve good performance on most frames in the training set, but we can further refine the results by manually indicating lines indicating lines in the training frames that beling to one animal or another, and adding these to the skeleton. This is achieved via the `LabeledData.save_auxpoints` function, which opens up a bare-bones gui for the user to label. We can see the value of this in an example frame. Before interactive segmentation:")
@@ -161,9 +168,10 @@ if __name__ == "__main__":
     contours = data.get_contour_from_seg(smoothed)
     ## We can now examine all of the contours that we extracted:
     md.new_paragraph("This is a big point, so we will show all of the contours that we have extracted so far.")
-    contours = extract_and_save_contours(md,data,auxpoints_trained,dryrun = True)
-    joblib.dump(contours,"./all_contours{}".format(datetime.datetime.now()))
+    contours,paths = extract_and_save_contours(md,data,auxpoints_trained,dryrun = True)
+    [insert_image(md,p) for p in paths]
     md.new_paragraph("We will take these contours, and create fourier descriptors out of them next in the file "+md.new_inline_link("./from_contours_to_shape_model.py"))
+    md.new_paragraph("Adding new stuff here")
 
     md.create_md_file()
 

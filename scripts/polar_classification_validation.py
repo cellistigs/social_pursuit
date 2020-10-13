@@ -19,7 +19,7 @@ cachedir = "/Volumes/TOSHIBA EXT STO/cache"
 memory = Memory(cachedir, verbose=1)
 
 if __name__ == "__main__":
-    md = initialize_doc()
+    md = initialize_doc({"prev":"polar_classification","parent":"summary_week_10_9_20"})
     md.new_header(title = "Summary", level = 1)
     md.new_paragraph("We want to validate our ability to detect errors in animal body part positions. In order to do this, our ground truth dataset will be a set of human labeled frames. We will look at the distribution of body part distances from this ground truth dataset, and examine how well data extracted from our sample lines up with this ground truth dataset.")   
     ### The algorithm is as follows: 

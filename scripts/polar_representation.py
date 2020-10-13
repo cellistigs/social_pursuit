@@ -18,7 +18,7 @@ from script_doc_utils import initialize_doc,insert_image,get_relative_image_path
 datapath = os.path.join("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat")
 
 if __name__ == "__main__":
-    md = initialize_doc()
+    md = initialize_doc({"next":"polar_classification","parent":"summary_week_10_9_20"})
     md.new_header(level = 1,title = "Summary")
     md.new_paragraph("This script explains idea for a new way of representing our dataset using a hierarchical polar representation. This idea is in part inspired by the literature from robotics (think of linkage models). The representation works as follows: First, take the average of all detected mouse body parts. This should be a point between the body parts of both animals. We will represent this average point in polar coordinates. Now, the positions of individual body parts can be recovered relative to this average point, again in polar coordinates. See below, where we give the representation of the centroid coordinates only:")
     data = loadmat(datapath)
