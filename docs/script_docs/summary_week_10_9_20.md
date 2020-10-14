@@ -1,9 +1,10 @@
 
-Script documentation for file: summary_week_10_9_20, Updated on:2020-10-12 18:13:00.837774
+Script documentation for file: summary_week_10_9_20, Updated on:2020-10-13 20:16:08.172263
 ==========================================================================================
  
-**prev file: [summary_week_9_25_20](./summary_week_9_25_20.md)** 
-
+  
+**prev file: [summary_week_9_25_20](./summary_week_9_25_20.md)**  
+**next file: [generate_comparison_figure](./generate_comparison_figure.md)**
 # Work summary for week of of 10/9/20
 
 

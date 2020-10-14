@@ -2,7 +2,7 @@ import os
 from script_doc_utils import initialize_doc,insert_image,get_relative_image_path
 
 if __name__ == "__main__":
-    md=initialize_doc({"prev":"summary_week_9_25_20"})
+    md=initialize_doc({"prev":"summary_week_9_25_20","next":"generate_comparison_figure"})
     md.new_header(level = 1,title = "Work summary for week of of 10/9/20")
     md.new_paragraph("In the past two weeks, my thinking about the best way to understand the social behavior project has changed significantly. I have a new set of directions in mind through fourier descriptors* that I think will significantly open up our ability to study natural behaviors. I came upon this new set of directions in the context of denoising, so I will start by explaining how this came to be.")
     md.new_line("You will recall that this was my todo list the last time that I showed it to you:")
