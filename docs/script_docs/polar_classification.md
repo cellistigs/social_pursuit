@@ -1,7 +1,11 @@
 
-Script documentation for file: polar_classification, Updated on:2020-10-09 18:35:51.060904
+Script documentation for file: polar_classification, Updated on:2020-10-12 22:50:03.425143
 ==========================================================================================
-
+ 
+  
+**parent file: [summary_week_10_9_20](./summary_week_10_9_20.md)**  
+**prev file: [polar_representation](./polar_representation.md)**  
+**next file: [polar_classification_validation](./polar_classification_validation.md)**
 # Classification based on hierarchical polar representation
 
 
@@ -64,21 +68,21 @@ If we apply these same methods to this simulated trajectory, we get the followin
 <p align="center">
     <img src="./images/distance_and_spectrum_frame0.png" />
 </p>  
-We can see that when our detections are degenerate, the distance matrix we constructed does not concentrate its signal as heavily in the largest component. In this case, we get a non-trivial contribution to the second eigenvalue as well. The top two eigenvectors account for 77.2% and 22.7% of the variance, respectively , with the corresponding eigenvectors:  
+We can see that when our detections are degenerate, the distance matrix we constructed does not concentrate its signal as heavily in the largest component. In this case, we get a non-trivial contribution to the second eigenvalue as well. The top two eigenvectors account for 75.7% and 24.2% of the variance, respectively , with the corresponding eigenvectors:  
   
 
 |v_1|v_2|
 | :---: | :---: |
-|-0.35775948227061277|0.06895307207245176|
-|-0.21294753110586598|0.5347562949893728|
-|-0.2815890188850078|-0.4128681021011938|
-|0.3557469449506944|0.09818624739896045|
-|0.3556339698715891|-0.09956907952805899|
-|-0.3592349392094409|0.033984099350139955|
-|-0.2013855489661925|0.5497859229012784|
-|-0.27098847973747964|-0.43633850656332335|
-|0.35097182592319|0.14533832446680534|
-|0.3579327552667758|-0.06582224103016128|
+|-0.36213924061042413|0.051987706579272944|
+|-0.22435633073202182|0.5051261235037151|
+|-0.2772997276850738|-0.4149460231407535|
+|0.3609609220188026|0.07324291577260042|
+|0.35860732593498984|-0.10322447368760983|
+|-0.36164774508166053|0.061758050860145706|
+|-0.18659295458907732|0.5510296245335373|
+|-0.27297508789206515|-0.42380959698186554|
+|0.3389288509566058|0.23138081657993625|
+|0.3574046446425503|-0.11552271718025446|
   
 Already, we can see that two important quantities for clustering will be the magnitude of the given eigenvalues, and the entries of the corresponding eigenvectors.  
 Many spectral clustering methods are based on the idea of partitioning a dataset based on the values of a given vector. Let's take inspiration from this, and cluster based on the sign of the entries in the top eigenvector.  

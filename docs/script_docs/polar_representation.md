@@ -1,7 +1,10 @@
 
-Script documentation for file: polar_representation, Updated on:2020-09-28 15:00:51.645376
+Script documentation for file: polar_representation, Updated on:2020-10-12 22:48:12.433593
 ==========================================================================================
-
+ 
+  
+**parent file: [summary_week_10_9_20](./summary_week_10_9_20.md)**  
+**next file: [polar_classification](./polar_classification.md)**
 # Summary
 
 

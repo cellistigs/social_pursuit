@@ -1,7 +1,9 @@
 
-Script documentation for file: singularity_detection_example, Updated on:2020-09-25 18:14:14.479610
+Script documentation for file: singularity_detection_example, Updated on:2020-10-12 22:58:52.467764
 ===================================================================================================
-
+ 
+  
+**parent file: [summary_week_9_25_20](./summary_week_9_25_20.md)**
 # Summary
 
 

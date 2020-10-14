@@ -1,7 +1,10 @@
 
-Script documentation for file: polar_classification_validation, Updated on:2020-10-02 18:17:49.923783
+Script documentation for file: polar_classification_validation, Updated on:2020-10-12 22:51:28.307690
 =====================================================================================================
-
+ 
+  
+**parent file: [summary_week_10_9_20](./summary_week_10_9_20.md)**  
+**prev file: [polar_classification](./polar_classification.md)**
 # Summary
 
 

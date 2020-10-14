@@ -1,7 +1,10 @@
 
-Script documentation for file: get_statistical_shape_model, Updated on:2020-10-09 13:33:28.938660
+Script documentation for file: get_statistical_shape_model, Updated on:2020-10-12 23:45:56.772246
 =================================================================================================
-
+ 
+  
+**parent file: [summary_week_10_9_20](./summary_week_10_9_20.md)**  
+**next file: [from_contours_to_shape_model](./from_contours_to_shape_model.md)**
 # Summary
 
 
@@ -136,6 +139,109 @@ This is a big point, so we will show all of the contours that we have extracted 
 <img src="./images/labeled_contours/contourframe97.png" />  
 <img src="./images/labeled_contours/contourframe98.png" />  
 <img src="./images/labeled_contours/contourframe99.png" />  
+<img src="./images/labeled_contours/contourframe100.png" />  
+<img src="./images/labeled_contours/contourframe0.png" />  
+<img src="./images/labeled_contours/contourframe1.png" />  
+<img src="./images/labeled_contours/contourframe2.png" />  
+<img src="./images/labeled_contours/contourframe3.png" />  
+<img src="./images/labeled_contours/contourframe4.png" />  
+<img src="./images/labeled_contours/contourframe5.png" />  
+<img src="./images/labeled_contours/contourframe6.png" />  
+<img src="./images/labeled_contours/contourframe7.png" />  
+<img src="./images/labeled_contours/contourframe8.png" />  
+<img src="./images/labeled_contours/contourframe9.png" />  
+<img src="./images/labeled_contours/contourframe10.png" />  
+<img src="./images/labeled_contours/contourframe11.png" />  
+<img src="./images/labeled_contours/contourframe12.png" />  
+<img src="./images/labeled_contours/contourframe13.png" />  
+<img src="./images/labeled_contours/contourframe14.png" />  
+<img src="./images/labeled_contours/contourframe15.png" />  
+<img src="./images/labeled_contours/contourframe16.png" />  
+<img src="./images/labeled_contours/contourframe17.png" />  
+<img src="./images/labeled_contours/contourframe18.png" />  
+<img src="./images/labeled_contours/contourframe19.png" />  
+<img src="./images/labeled_contours/contourframe20.png" />  
+<img src="./images/labeled_contours/contourframe21.png" />  
+<img src="./images/labeled_contours/contourframe22.png" />  
+<img src="./images/labeled_contours/contourframe23.png" />  
+<img src="./images/labeled_contours/contourframe24.png" />  
+<img src="./images/labeled_contours/contourframe25.png" />  
+<img src="./images/labeled_contours/contourframe26.png" />  
+<img src="./images/labeled_contours/contourframe27.png" />  
+<img src="./images/labeled_contours/contourframe28.png" />  
+<img src="./images/labeled_contours/contourframe29.png" />  
+<img src="./images/labeled_contours/contourframe30.png" />  
+<img src="./images/labeled_contours/contourframe31.png" />  
+<img src="./images/labeled_contours/contourframe32.png" />  
+<img src="./images/labeled_contours/contourframe33.png" />  
+<img src="./images/labeled_contours/contourframe34.png" />  
+<img src="./images/labeled_contours/contourframe35.png" />  
+<img src="./images/labeled_contours/contourframe36.png" />  
+<img src="./images/labeled_contours/contourframe37.png" />  
+<img src="./images/labeled_contours/contourframe38.png" />  
+<img src="./images/labeled_contours/contourframe39.png" />  
+<img src="./images/labeled_contours/contourframe40.png" />  
+<img src="./images/labeled_contours/contourframe41.png" />  
+<img src="./images/labeled_contours/contourframe42.png" />  
+<img src="./images/labeled_contours/contourframe43.png" />  
+<img src="./images/labeled_contours/contourframe44.png" />  
+<img src="./images/labeled_contours/contourframe45.png" />  
+<img src="./images/labeled_contours/contourframe46.png" />  
+<img src="./images/labeled_contours/contourframe47.png" />  
+<img src="./images/labeled_contours/contourframe48.png" />  
+<img src="./images/labeled_contours/contourframe49.png" />  
+<img src="./images/labeled_contours/contourframe50.png" />  
+<img src="./images/labeled_contours/contourframe51.png" />  
+<img src="./images/labeled_contours/contourframe52.png" />  
+<img src="./images/labeled_contours/contourframe53.png" />  
+<img src="./images/labeled_contours/contourframe54.png" />  
+<img src="./images/labeled_contours/contourframe55.png" />  
+<img src="./images/labeled_contours/contourframe56.png" />  
+<img src="./images/labeled_contours/contourframe57.png" />  
+<img src="./images/labeled_contours/contourframe58.png" />  
+<img src="./images/labeled_contours/contourframe59.png" />  
+<img src="./images/labeled_contours/contourframe60.png" />  
+<img src="./images/labeled_contours/contourframe61.png" />  
+<img src="./images/labeled_contours/contourframe62.png" />  
+<img src="./images/labeled_contours/contourframe63.png" />  
+<img src="./images/labeled_contours/contourframe64.png" />  
+<img src="./images/labeled_contours/contourframe65.png" />  
+<img src="./images/labeled_contours/contourframe66.png" />  
+<img src="./images/labeled_contours/contourframe67.png" />  
+<img src="./images/labeled_contours/contourframe68.png" />  
+<img src="./images/labeled_contours/contourframe69.png" />  
+<img src="./images/labeled_contours/contourframe70.png" />  
+<img src="./images/labeled_contours/contourframe71.png" />  
+<img src="./images/labeled_contours/contourframe72.png" />  
+<img src="./images/labeled_contours/contourframe73.png" />  
+<img src="./images/labeled_contours/contourframe74.png" />  
+<img src="./images/labeled_contours/contourframe75.png" />  
+<img src="./images/labeled_contours/contourframe76.png" />  
+<img src="./images/labeled_contours/contourframe77.png" />  
+<img src="./images/labeled_contours/contourframe78.png" />  
+<img src="./images/labeled_contours/contourframe79.png" />  
+<img src="./images/labeled_contours/contourframe80.png" />  
+<img src="./images/labeled_contours/contourframe81.png" />  
+<img src="./images/labeled_contours/contourframe82.png" />  
+<img src="./images/labeled_contours/contourframe83.png" />  
+<img src="./images/labeled_contours/contourframe84.png" />  
+<img src="./images/labeled_contours/contourframe85.png" />  
+<img src="./images/labeled_contours/contourframe86.png" />  
+<img src="./images/labeled_contours/contourframe87.png" />  
+<img src="./images/labeled_contours/contourframe88.png" />  
+<img src="./images/labeled_contours/contourframe89.png" />  
+<img src="./images/labeled_contours/contourframe90.png" />  
+<img src="./images/labeled_contours/contourframe91.png" />  
+<img src="./images/labeled_contours/contourframe92.png" />  
+<img src="./images/labeled_contours/contourframe93.png" />  
+<img src="./images/labeled_contours/contourframe94.png" />  
+<img src="./images/labeled_contours/contourframe95.png" />  
+<img src="./images/labeled_contours/contourframe96.png" />  
+<img src="./images/labeled_contours/contourframe97.png" />  
+<img src="./images/labeled_contours/contourframe98.png" />  
+<img src="./images/labeled_contours/contourframe99.png" />  
 <img src="./images/labeled_contours/contourframe100.png" />
 
 We will take these contours, and create fourier descriptors out of them next in the file [./from_contours_to_shape_model.py](./from_contours_to_shape_model.py)
+
+Adding new stuff here
