@@ -10,7 +10,7 @@ from skimage.filters import median
 from skimage import color
 #from botocore.stub import Stubber
 from social_pursuit.data import PursuitTraces,Polar,PursuitVideo,ExperimentInitializer#,PursuitTraces,s3_client,transfer_if_not_found
-from social_pursuit.labeled import LabeledData,LineSelector
+from social_pursuit.labeled import LabeledData,LineSelector,FourierDescriptor
 import social_pursuit.data
 import json
 
@@ -383,16 +383,67 @@ class Test_LabeledData():
         dictentries = joblib.load(os.path.join(fixture_dir,"test_contours"))
         contourdict = {i:dictentries[i] for i in range(len(dictentries))}
         contourfs = data.get_contour_fourier_rep(contourdict)
-        ind = 0
-        contourf = contourfs[ind]
-        tips = data.dataarray[ind,:,0,:]
-        cents = data.dataarray[ind,:,3,:]
-        orig_contour = np.fft.ifft(contourf["dam"]["coefs"])
-        plt.plot(np.real(orig_contour),np.imag(orig_contour))
-        normedf = data.center_and_rotate_fourier_rep(contourdict)
-        new_contour = np.fft.ifft(normedf[ind]["dam"]["coefs"])
-        plt.plot(np.real(new_contour),np.imag(new_contour))
+        ind = 3 
+        for ind in [2,3]:
+            contourf = contourfs[ind]
+            tips = data.dataarray[ind,:,0,:]
+            cents = data.dataarray[ind,:,3,:]
+            orig_contour = np.fft.ifft(contourf["dam"]["coefs"])
+            plt.plot(np.real(orig_contour),np.imag(orig_contour))
+            normedf = data.center_and_rotate_fourier_rep(contourfs)
+            new_contour = np.fft.ifft(normedf[ind]["dam"]["coefs"])
+            plt.plot(np.real(new_contour),np.imag(new_contour))
+            plt.plot(np.real(new_contour)[0],np.imag(new_contour)[0],"x")
+        plt.savefig(os.path.join(output_dir,"test_LabeledData_center_and_rotate_fourier_rep"))
+        assert 0
+        
+    def test_LabeledData_center_and_rotate_fourier_rep_ori(self):
+        data = LabeledData(labeled_data,additionalpath)
+        dictentries = joblib.load(os.path.join(fixture_dir,"test_contours"))
+        contourdict = {i:dictentries[i] for i in range(len(dictentries))}
+        contourfs = data.get_contour_fourier_rep(contourdict)
+        normedf = data.center_and_rotate_fourier_rep(contourfs)
+
+        for ind in range(len(dictentries)):
+            tips = data.dataarray[ind,:,0,:]
+            cents = data.dataarray[ind,:,3,:]
+            new_contour = np.fft.ifft(normedf[ind]["dam"]["coefs"])
+            plt.plot(np.real(new_contour),np.imag(new_contour),"black")
+            plt.plot(np.real(new_contour)[0],np.imag(new_contour)[0],"rx")
+            plt.plot(np.real(new_contour)[20],np.imag(new_contour)[20],"bx")
         plt.show()
+        plt.savefig("test_LabeledData_center_and_rotate_fourier_rep_ori")
+
+class Test_FourierDescriptor():
+    def test_FourierDescriptor(self):
+        ## Test contours are from frames 0-4
+        dictentries = joblib.load(os.path.join(fixture_dir,"test_contours"))
+        data = LabeledData(labeled_data,additionalpath)
+        frame = 0
+        image = data.get_images([frame])[0]
+        points = data.dataarray[frame,:,:,:]
+        contour = dictentries[frame]
+        for i in [0,1]:
+            contour[i] = contour[i][:1]
+        fd = FourierDescriptor(image,contour,points)
+
+    def test_FourierDescriptor_normalized_interpolation(self):
+        dictentries = joblib.load(os.path.join(fixture_dir,"test_contours"))
+        data = LabeledData(labeled_data,additionalpath)
+        frame = 0
+        image = data.get_images([frame])[0]
+        points = data.dataarray[frame,:,:,:]
+        contour = dictentries[frame]
+        for i in [0,1]:
+            contour[i] = contour[i][:1]
+        fd = FourierDescriptor(image,contour,points)
+        interptraj = fd.normalized_interpolation(512)
+        for mi,mouse in enumerate(interptraj):
+            assert np.all(interptraj[mouse][0,:] == contour[mi][0][0,:])
+            assert np.all(interptraj[mouse][-1,:] == contour[mi][0][-1,:])
+
+   
+
         
 
 class Test_LineSelector():
