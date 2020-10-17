@@ -15,6 +15,7 @@ from skimage import measure
 from skimage import color
 from social_pursuit.data import mkdir_notexists
 from scipy import ndimage as ndi
+from scipy.interpolate import interp1d
 import os,sys
 import tqdm
 import json
@@ -702,6 +703,7 @@ class LabeledData(object):
         """ TODO write test for this! Get the pair of contours that aligns best with the detected animal points in each frame.
 
         :param indices: numpy array of the frame indices in the training set for which you want contours
+        :return: a list of lists, organized in depth as frame, animal, contour per animal.
         """
         binary = self.binarize_frames(indices)
         cleanbinary = self.clean_binary(binary)
@@ -806,6 +808,7 @@ class LabeledData(object):
         dirvec = tips-cents
         compdirvec = dirvec[1,:]+1j*dirvec[0,:]
         mouseangles = np.angle(compdirvec)
+        print(mouseangles,"mouseangles")
         aligndict = {}
         for keyind,key in enumerate(fourierdict.keys()):
             aligndict[key] = fourierdict[key]
@@ -815,7 +818,6 @@ class LabeledData(object):
             aligndict[key]["coefs"] = rotated
 
         return aligndict
-
 
     def center_and_rotate_fourier_rep(self,fourierdict):
         """Given a set of fourier coefficent representations for animal contours, centers them to the centroid point, and rotates them so that the tip of the nose is facing straight up. References the detected training points to do this transformation.
@@ -829,11 +831,85 @@ class LabeledData(object):
             tips = points[:,0,:]
             cents = points[:,3,:]
             ## Get the x-y coordinates of the 
-            self.find_startpoint(f,tips,cents)
+            frot  = self.find_startpoint(fentry,tips,cents)
+            fcent = self.center_contour(frot,cents)
+            falign = self.rotate_contour(fcent,tips,cents)
+            dictentries[f] = falign
+        return dictentries
+            
 
-    def get_shape_statistics(self,fourierdict):
-        pass
+    def get_shape_statistics(self,fourierdict,maxcomponents = 30,fps = 30):
+        """Given a set of fourier coefficent representations for animal contours, calculates a mean and standard deviation for the shape statistics. Assumes that these representations have been normalized for starting point, rotation, and location.
+
+        :param fourierdict: dictionary with keys giving training frame indices and values giving the fourier representation of corresponding contours.
+        :param maxcomponents: maximum pairs of frequencies to consider when constructing statistics. 
+        :param fps: fps of the video, used to calibrate frequencies. asssumed 30 fps.
+        :return: dictionary with keys giving statistic names (mean,std) and values giving dictionaries containing per animal shape statistics.
+        """
+        components_per_side = int(maxcomponents/2)
+
+        data_array = {"dam":[],"virgin":[]}
+        maxlen = 0
+        for f,fentry in fourierdict.items():
+            for d in data_array.keys():
+
+                data_array[d].append(fentry)
+
+        ## Gross, iterating twice
+        for d,dvals in data_array:
+            pass
 
     def get_multivariate_pose_distribution(self,fourierdict):
         pass
+
+class FourierDescriptor():
+    """A data class to handle the creation and refinement of fourier descriptors for individual images.  
+    Assumes that one has run the `LabeledData.get_contours` method to generate the relevant contours here. Note we are assuming all operations here are done on a pre-specified set of training frames. 
+
+    :param image:
+    :param contours:
+    :param points:
+    """
+    def __init__(self,image,contours,points):
+        """Filters out misspecified input data.
+        """
+        self.image = image
+        self.contours = contours
+        self.points = points
+        assert len(self.image.shape) ==3, "must be a single rgb image"
+        assert len(self.contours) == 2,"must provide a list of contours for virgin and dam."
+        for c in self.contours:
+            assert len(c) == 1,"assume one contour per animal."
+            assert c[0].shape[-1] == 2
+        assert self.points.shape == (2,5,2)
+        
+    def normalized_interpolation(self,n = 512):
+        """Returns a normalized contour linearly interpolated to a pre-specified number of points. Choose a power of two for fast computations via FFT.  
+        :param n: the number of points in your interpolation
+        :return: returns a dictionary with keys as animal names, and values as arrays of interpolated contour points.
+        """
+        animals = ["virgin","dam"]
+        contours = {"virgin":None,"dam":None}
+        for ai,a in enumerate(animals):
+            contour = self.contours[ai][0]
+            print(contour.shape,"contour shape")
+            x = np.arange(len(contour))
+            ifunc = interp1d(x,contour,axis = 0)
+            xinterp = np.linspace(0,x[-1],n)
+            contours[a] = ifunc(xinterp)
+        return contours
+
+    def get_complex_fourier_features(self,signal):
+        """Get fourier features by projecting the y coordinates to the complex plane and applying a dft. This will generate a two-sided spectrum that is asymmetric. TODO: determine the relationship between these different parametrizations. 
+        :param signal: the two dimensional (x,y) time series that we will apply an fft to.
+        :return: a dictionary giving the coefficients and frequencies at which to register these frequencies. 
+        """
+
+    def get_elliptic_fourier_features(self):
+        """Get fourier features by treating x and y as two independent 1-d signals with independent transforms. This will generate two separate symmetric spectrums. TODO: determine the relationship between these different parametrizations. 
+        :param signal: the two dimensional (x,y) time series that we will apply an fft to.
+        :return: a dictionary giving the coefficients and frequencies at which to register these frequencies. 
+        """
+
+
 
