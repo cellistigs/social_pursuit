@@ -13,12 +13,41 @@ from skimage.morphology import binary_closing,binary_opening,remove_small_holes
 from skimage.segmentation import watershed
 from skimage import measure
 from skimage import color
+from sklearn.decomposition import PCA
 from social_pursuit.data import mkdir_notexists
 from scipy import ndimage as ndi
 from scipy.interpolate import interp1d
 import os,sys
 import tqdm
 import json
+
+def rotate_coefficients(coefficients,b):
+    """Given the fourier coefficients of a periodic time series, gives the coefficents for the same series starting from the bth entry.
+
+    """
+    n = len(coefficients)
+    rotation_factor = np.exp(2*np.pi*1j*b*np.linspace(0,n-1,n)/n)
+    rot_coefs = coefficients*rotation_factor
+    diff_init = np.sum(rot_coefs)/n
+    return rot_coefs,diff_init
+
+def calculate_orientation(contour):
+    """Given a contour (assuming closed) calculates the orientation in which it is rotating about the mean point. 
+    If the sum of differences is positive, indicates most rotation is happening counterclockwise, and vice versa. 
+    :param contour: the animal contour, given as a (n,2) numpy array. 
+
+    """
+    mean = np.mean(contour,axis = 0)    
+    vectors = contour - mean
+    ## Cast to complex to easily calculate angle. 
+    compvec = vectors[:,0]+1j*vectors[:,1]
+    angles = (np.angle(compvec)+np.pi)%(2*np.pi)
+    ## The periodic boundary gives us some issues. Neglect the largest difference:
+    diffs = np.diff(angles)
+    discont = np.argmax(np.abs(diffs))
+    diffs[discont] = 0
+    ang_diffs = np.sum(diffs)
+    return ang_diffs
 
 class LineSelector():
     """Class to draw lines via click and drag. 
@@ -808,7 +837,6 @@ class LabeledData(object):
         dirvec = tips-cents
         compdirvec = dirvec[1,:]+1j*dirvec[0,:]
         mouseangles = np.angle(compdirvec)
-        print(mouseangles,"mouseangles")
         aligndict = {}
         for keyind,key in enumerate(fourierdict.keys()):
             aligndict[key] = fourierdict[key]
@@ -837,15 +865,53 @@ class LabeledData(object):
             dictentries[f] = falign
         return dictentries
             
+    def organize_fourierdicts(self,fourierdicts):
+        """Given a set of fourier coefficient representations as a dictionary of dictionaries, arranges it into a format that is easier to parse. 
 
-    def get_shape_statistics(self,fourierdict,maxcomponents = 30,fps = 30):
+        :param fourierdicts: A dictionary of dictionaries, with keys giving training frame indices and values giving the fourier representation of corresponding contours. Each value is a dictionary specifying the coefficients and frequencies of the corresponding representation.
+        """
+        indices = list(fourierdicts.keys())
+        animals = list(fourierdicts[indices[0]].keys())
+        identifier = fourierdicts[indices[0]][animals[0]].keys() 
+        if "xcoefs" in identifier:
+            fdtype = "elliptic"
+        elif "coefs" in identifier:
+            fdtype = "complex"
+        else:
+            raise Exception("dictionary not formatted correctly.")
+        all_animals = []
+        for animal in animals: 
+            if fdtype is "complex":
+                all_coefs = [fourierdicts[i][animal]["coefs"] for i in indices]
+                animaldata = np.array(all_coefs) ## has shape (len(indices),nb_coefficients)
+            elif fdtype is "elliptic":
+                x_coefs = np.stack([fourierdicts[i][animal]["xcoefs"] for i in indices],axis =0)
+                y_coefs = np.stack([fourierdicts[i][animal]["ycoefs"] for i in indices],axis =0)
+                animaldata = np.stack([x_coefs,y_coefs],axis = 1) ## has shape (len(indices),coordinate,nb_coefficients)
+            all_animals.append(animaldata)
+        ## Assume all have the same frequencies.
+        all_data = {"data":np.stack(all_animals,axis = -1),"fdtype":fdtype,"indices":indices,"animals":animals,"freqs":fourierdicts[indices[0]][animal]["freqs"]}
+        return all_data
+
+    def get_shape_statistics(self,fourierdicts,maxcomponents = 30,fps = 30):
         """Given a set of fourier coefficent representations for animal contours, calculates a mean and standard deviation for the shape statistics. Assumes that these representations have been normalized for starting point, rotation, and location.
 
-        :param fourierdict: dictionary with keys giving training frame indices and values giving the fourier representation of corresponding contours.
+        :param fourierdicts: A dictionary of dictionaries, with keys giving training frame indices and values giving the fourier representation of corresponding contours. Each value is a dictionary specifying the coefficients and frequencies of the corresponding representation.
         :param maxcomponents: maximum pairs of frequencies to consider when constructing statistics. 
         :param fps: fps of the video, used to calibrate frequencies. asssumed 30 fps.
         :return: dictionary with keys giving statistic names (mean,std) and values giving dictionaries containing per animal shape statistics.
         """
+        statsdict = {} #"virgin, dam __ mean, std"
+        all_contour_dicts = list(fourierdicts.values())
+        keys = all_contour_dicts[0].keys()
+        for key in keys:
+            contours = [a[key] for a in all_contour_dicts]
+            mean = np.mean(np.array(contours),axis = 0) 
+            std = np.std(np.array(contours),axis = 0)
+            statsdict[key] = {"mean":mean,"std":std}
+        return statsdict
+
+
         components_per_side = int(maxcomponents/2)
 
         data_array = {"dam":[],"virgin":[]}
@@ -859,6 +925,53 @@ class LabeledData(object):
         for d,dvals in data_array:
             pass
 
+    def get_pca(self,organized_fourierdicts,n_components = None):
+        """Applies PCA to the organized fourier dictionaries, and returns the fitted pca object. A wrapper for sklearn.decomposition.PCA, with appropriate data preprocessing steps. For elliptic fourier series, the fourier transform of each coordinate is conjugate symmetric, so we can just take the positive part of the series without losing information. For the complex fourier series, we must take the whole thing.  
+        :param organized_fourierdicts: Assumes that one has applied the method `organize_fourierdicts` to a dictionary of fourier dictionaries.  
+        :param n_components: (optional) The number of components to use when initializing pca. If none, automatically calculated by sklearn module. 
+        """
+        dampca = PCA(n_components=n_components)
+        virgpca = PCA(n_components=n_components)
+        ## Determine if we are working with complex or elliptic signals. 
+        fdtype = organized_fourierdicts["fdtype"]
+        if fdtype == "elliptic":
+            data = organized_fourierdicts["data"]
+            ## Conjugate symmetric, so we throw away all negative frequencies in the feature axis except the nyquist frequency. Given in standard order, these are the first 256 entries of the frequency vector in the feature axis.
+            inds_nondegenerate = np.arange(data.shape[2]//2+1)
+            orig_shape = data.shape
+            data_nondegen = data[:,:,inds_nondegenerate,:]
+            ## Now we can stack the real and imaginary parts in the feature axis. 
+            data_realimag = np.concatenate([np.real(data_nondegen),np.imag(data_nondegen)], axis = 2)
+            ## Now we stack x and y in the feature axis.
+            data_xy = data_realimag.reshape(orig_shape[0],orig_shape[1]*(orig_shape[2]+2),orig_shape[3])
+
+            virginweights = virgpca.fit_transform(data_xy[:,:,0])
+            damweights = dampca.fit_transform(data_xy[:,:,1])
+            pcadict = {"virgin":{"pca":virgpca,"weights":virginweights},"dam":{"pca":dampca,"weights":damweights}}
+        else:
+            raise NotImplementedError("Only implemented elliptic transform features so far.")
+            
+        return pcadict
+
+    def get_contour_from_pc(self,pca,weights):
+        """When given a fit pca object and vector of pc weights, returns a contour of mouse weights that corresponds to that set of weights as applied to the provided pca model. 
+        :param pca: A pca model that has been fit to contour data. 
+        :param weights: A set of vectors, with overall shape (m,n_components) where n_components is the number of components expected by the pca model and m is the number of vectors we would like to fit.
+
+        """
+        assert pca.n_components == weights.shape[1]
+        datavectors = pca.inverse_transform(weights)
+        reshaped = datavectors.reshape(len(weights),2,-1)
+        featurelength = int(reshaped.shape[-1]/2)
+        reshaped_complex = reshaped[:,:,:featurelength]+1j*reshaped[:,:,featurelength:]
+        ## We need to add back to complex conjugation. 
+        xy = np.fft.irfft(reshaped_complex)
+        return xy#np.stack([x,y],axis = -1)
+
+        
+
+
+
     def get_multivariate_pose_distribution(self,fourierdict):
         pass
 
@@ -867,7 +980,7 @@ class FourierDescriptor():
     Assumes that one has run the `LabeledData.get_contours` method to generate the relevant contours here. Note we are assuming all operations here are done on a pre-specified set of training frames. 
 
     :param image:
-    :param contours:
+    :param contours: a dictionary with two entries: one for the dam and one for the virgin, with corresponding image contours.
     :param points:
     """
     def __init__(self,image,contours,points):
@@ -878,38 +991,255 @@ class FourierDescriptor():
         self.points = points
         assert len(self.image.shape) ==3, "must be a single rgb image"
         assert len(self.contours) == 2,"must provide a list of contours for virgin and dam."
-        for c in self.contours:
-            assert len(c) == 1,"assume one contour per animal."
-            assert c[0].shape[-1] == 2
+        assert list(self.contours.keys()) == ["virgin","dam"], "must be named appropriately"
+        for c,centry in self.contours.items():
+            #assert len(centry) == 1,"assume one contour per animal: {} contours given".format(len(centry))
+            assert centry.shape[-1] == 2
         assert self.points.shape == (2,5,2)
+        tips = self.points[:,0,:]
+        cents = self.points[:,3,:]
+        dirvec = tips-cents
+        compdirvec = dirvec[1,:]+1j*dirvec[0,:]
+        self.mouseangles = np.angle(compdirvec)
         
     def normalized_interpolation(self,n = 512):
-        """Returns a normalized contour linearly interpolated to a pre-specified number of points. Choose a power of two for fast computations via FFT.  
+        """Returns a normalized contour linearly interpolated to a pre-specified number of points. Choose a power of two for fast computations via FFT. Additionally, will change the orientation of contours so that all rotate counterclockwise. 
         :param n: the number of points in your interpolation
         :return: returns a dictionary with keys as animal names, and values as arrays of interpolated contour points.
         """
         animals = ["virgin","dam"]
         contours = {"virgin":None,"dam":None}
-        for ai,a in enumerate(animals):
-            contour = self.contours[ai][0]
-            print(contour.shape,"contour shape")
+        for a in animals:
+            contour = self.contours[a]
+            integrated_angle = calculate_orientation(contour)
+            if integrated_angle < 0:
+                contour = np.flipud(contour)
             x = np.arange(len(contour))
             ifunc = interp1d(x,contour,axis = 0)
             xinterp = np.linspace(0,x[-1],n)
             contours[a] = ifunc(xinterp)
         return contours
 
-    def get_complex_fourier_features(self,signal):
-        """Get fourier features by projecting the y coordinates to the complex plane and applying a dft. This will generate a two-sided spectrum that is asymmetric. TODO: determine the relationship between these different parametrizations. 
-        :param signal: the two dimensional (x,y) time series that we will apply an fft to.
+    def get_complex_fourier_features(self,signal=None):
+        """Get fourier features by projecting the y coordinates to the complex plane and applying a dft. This will generate a two-sided spectrum that is asymmetric. Note that we assume a sampling frequency of 1 for uniformity (in reality 30 fps). TODO: determine the relationship between these different parametrizations.  
+        :param signal: (optional) If given, a dictionary containing a two dimensional (x,y) time series that we will apply an fft to for each animal. If not given, apply to the "contour" attribute
         :return: a dictionary giving the coefficients and frequencies at which to register these frequencies. 
         """
+        if signal is None:
+            signal = self.contours
+        assert list(signal.keys()) == ["virgin","dam"]
+        transformdict = {}
+        for key,ksig in signal.items():
+            csignal = ksig[:,0]+1j*ksig[:,1]
+            fft_coefs = np.fft.fft(csignal)
+            fft_freqs = np.fft.fftfreq(len(csignal))
+            transformdict[key] = {"coefs":fft_coefs,"freqs":fft_freqs}
+        return transformdict 
 
-    def get_elliptic_fourier_features(self):
+
+    def get_elliptic_fourier_features(self,signal=None):
         """Get fourier features by treating x and y as two independent 1-d signals with independent transforms. This will generate two separate symmetric spectrums. TODO: determine the relationship between these different parametrizations. 
-        :param signal: the two dimensional (x,y) time series that we will apply an fft to.
-        :return: a dictionary giving the coefficients and frequencies at which to register these frequencies. 
+        :param signal: (optional) If given, a dictionary containing a two dimensional (x,y) time series that we will apply an fft to for each animal. If not given, apply to the "contour" attribute
+        :return: a dictionary giving the coefficients and frequencies at which to register these frequencies (separate of x and y) 
         """
+        if signal is None:
+            signal = self.contours
+        assert list(signal.keys()) == ["virgin","dam"]
+        transformdict = {}
+        for key,ksig in signal.items():
+            xsignal = ksig[:,0]
+            ysignal = ksig[:,1]
+            fft_xcoefs = np.fft.fft(xsignal)
+            fft_ycoefs = np.fft.fft(ysignal)
+            fft_freqs = np.fft.fftfreq(len(xsignal))
+            transformdict[key] = {"xcoefs":fft_xcoefs,"ycoefs":fft_ycoefs,"freqs":fft_freqs}
+        return transformdict 
+
+    def convert_to_contour(self,fourierdict):
+        """Given a dictionary of fourier descriptors per mouse, converts to contours. Respects the reversed x y convention of the contours. Will have to be reversed if comparing to points. 
+
+        """
+        mousedict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            if fourierdict[key].get("coefs",None) is not None:
+                ifft = np.fft.ifft(fourierdict[key]["coefs"])
+                coords = np.stack([np.real(ifft),np.imag(ifft)],axis = 1)
+            else:
+                xifft = np.real(np.fft.ifft(fourierdict[key]["xcoefs"]))
+                yifft = np.real(np.fft.ifft(fourierdict[key]["ycoefs"]))
+                coords = np.stack([xifft,yifft],axis = 1)
+            mousedict[key] = coords 
+        return mousedict 
+                
+
+    def find_startpoint(self,fourierdict,points = "processed"):
+        """Find the point on the contour to assign as t = 0. We would like this to be as close as possible to the mouse's nose tip for consistency. 
+        :param fourierdict: If given, a dictionary containing a two dimensional (x,y) time series that we will apply an fft to for each animal. If not given, apply to the "contour" attribute
+        :param points: (optional) Can be "processed","raw", or a numpy array. Processed means assume that the given fourier dictionary corresponds to a trajectory that has been centered and rotated so the vector from centroid to tip points upwards. Raw means the points that the object was initialized with. Otherwise can be 
+        :return: dictionary of the same shape as fourierdict, giving the relevant frequency coefficients. 
+        """
+        if points == "processed":
+            points = self.process_points()
+        elif points == "raw":
+            points = self.points
+        elif type(points) == np.ndarray:
+            assert points.shape == (2,5,2),"must give in shape (coordinates,part,animal)"
+            points = points
+        else:
+            raise Exception("points argument not recognized.")
+
+        rotdict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            rotdict[key] = {}
+            rotdict[key]["freqs"] = fourierdict[key]["freqs"]
+            tips = points[:,0,keyind]
+            ## Depending on if these are complex or elliptic fourier features, we need different distance functions.  
+            ## if complex:
+            if fourierdict[key].get("coefs",None) is not None:
+                ## X and Y are flipped for contours.
+                dists = lambda b: np.abs(rotate_coefficients(fourierdict[key]["coefs"],b)[1] - (tips[1]+1j*tips[0]))
+                n = len(fourierdict[key]["coefs"])
+            else:
+                xfreqstart = lambda b: rotate_coefficients(fourierdict[key]["xcoefs"],b)[1]
+                yfreqstart = lambda b: rotate_coefficients(fourierdict[key]["ycoefs"],b)[1]
+                n = len(fourierdict[key]["xcoefs"])
+                ## X and Y are flipped for contours.
+                dists = lambda b: np.linalg.norm(np.array([yfreqstart(b),xfreqstart(b)])-tips)
+            distvals = map(dists,np.linspace(0,n-1,n))
+            z = np.argmin(list(distvals))
+            rotdict[key]["z"] = z
+            if fourierdict[key].get("coefs",None) is not None:
+                rotdict[key]["coefs"] = rotate_coefficients(fourierdict[key]["coefs"],z)[0]
+            else:
+                rotdict[key]["xcoefs"] = rotate_coefficients(fourierdict[key]["xcoefs"],z)[0]
+                rotdict[key]["ycoefs"] = rotate_coefficients(fourierdict[key]["ycoefs"],z)[0]
+            
+        return rotdict
+
+    def center_contour(self,fourierdict):
+        """Center the fourier contours at the corresponding mouse centroid point. This will involve getting the dc component of the fourier representation, subtracting off the markered centroid position, and converting back.
+
+        :param fourierdict: a dictionary with entries for the virgin and dam, containing the fourier coefficients and corresponding frequencies for both. can be given as complex or elliptic fourier features.
+        """
+        centdict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            cent_marker = self.points[:,3,keyind]
+            centdict[key] = fourierdict[key] 
+            if fourierdict[key].get("coefs",None) is not None:
+                condition = "complex"
+                dc = fourierdict[key]["coefs"][0]
+                newdc = dc - (cent_marker[1]+1j*cent_marker[0])*len(fourierdict[key]["coefs"])
+                centdict[key]["coefs"][0] = newdc
+
+            else:
+                condition = "elliptic"
+                xdc = fourierdict[key]["xcoefs"][0]
+                ydc = fourierdict[key]["ycoefs"][0]
+                newxdc = xdc - cent_marker[1]*len(fourierdict[key]["xcoefs"])
+                newydc = ydc - cent_marker[0]*len(fourierdict[key]["xcoefs"])
+                centdict[key]["xcoefs"][0] = newxdc
+                centdict[key]["ycoefs"][0] = newydc
+        return centdict
+
+    def rotate_contour(self,fourierdict):
+        """Rotates the fourier coefficient to align the mouse contour to the line between the centroid and the tip of the nose. 
+        :param fourierdict: a dictionary with entries for the virgin and dam, containing the fourier coefficients and corresponding frequencies for both. can be given as complex or elliptic fourier features.
+        """
+        ## Get the angle between tips and centroids for both animals:    
+        mouseangles = self.mouseangles
+        aligndict = {}
+        for keyind,key in enumerate(fourierdict.keys()):
+            aligndict[key] = fourierdict[key]
+            ## Center the angle to the vertical.
+            baseangle = np.pi/2-mouseangles[keyind]
+            rotfactor = np.exp(1j*baseangle)
+            if fourierdict[key].get("coefs",None) is not None:
+                coefficients = fourierdict[key]["coefs"]
+                rotcoefs = coefficients*rotfactor
+                aligndict[key]["coefs"] = rotcoefs
+            else: 
+                angle = -baseangle
+                ## We need a bona fide rotation matrix here. 
+                xcoefficients = fourierdict[key]["xcoefs"]
+                ycoefficients = fourierdict[key]["ycoefs"]
+                ## Combine into a matrix: 
+                a = np.real(xcoefficients)[:,None,None]
+                b = np.imag(xcoefficients)[:,None,None]
+                c = np.real(ycoefficients)[:,None,None]
+                d = np.imag(ycoefficients)[:,None,None]
+                blockmatrix = np.block([[a,b],[c,d]])
+                rotmatrix = np.array([[np.cos(angle),np.sin(angle)],[-np.sin(angle),np.cos(angle)]])
+                rotated = np.matmul(rotmatrix,blockmatrix)
+                xrotcoefs = rotated[:,0,0]+1j*rotated[:,0,1] 
+                yrotcoefs = rotated[:,1,0]+1j*rotated[:,1,1] 
+                aligndict[key]["xcoefs"] = xrotcoefs
+                aligndict[key]["ycoefs"] = yrotcoefs
+        return aligndict
+
+    def center_points(self,points=None):
+        """Get the centered representation of body part markers to correspond with centered contours. 
+
+        """
+        if points is None:
+            points = self.points
+        return points-points[:,3:4,:]
+
+    def rotate_points(self,points = None):
+        """Get the rotated representation of points: 
+
+        """
+        angles = -self.mouseangles
+        rotated = []
+        for i in range(2):
+            angle = angles[i]+np.pi/2
+            rotmatrix = np.array([[np.cos(angle),np.sin(angle)],[-np.sin(angle),np.cos(angle)]])
+            rot = np.matmul(rotmatrix,(points[:,:,i]))
+            rotated.append(rot)
+        return np.stack(rotated,axis = -1)
+
+    def process_points(self):
+        """Pipeline to process points in conjunction with fourier descriptors. 
+        """
+        centered = self.center_points(self.points)
+        rotated = self.rotate_points(centered)
+        return rotated
+
+    def process_contour(self,mode = "elliptic"):
+        """Full pipeline to take the contour given at object initialization, and apply the following methods to it: 
+        `normalized_interpolation`: Correct the orientation of the contour, and sample to a pre-determined number of points. 
+        `get___fourier_features`: gets either complex or elliptic fourier features and applies further processing steps to them. 
+        `center_contour`: Center the contour at the origin.
+        `rotate_contour`: Rotate the contour to have the tip pointing in the y direction as much as possible
+        `find_startpoint`: Start the contour at the point closest to the tip of the nose. 
+
+        """
+        interpolated = self.normalized_interpolation(512)
+        if mode is "elliptic":
+            features = self.get_elliptic_fourier_features(interpolated)
+        elif mode is "complex":
+            features = self.get_complex_fourier_features(interpolated)
+        else:
+            raise Exception("mode must be one of elliptic or complex.")
+        
+        centered = self.center_contour(features)
+
+        rotated = self.rotate_contour(centered)
+
+        initialized = self.find_startpoint(rotated) 
+
+        return initialized
+
+    def evaluate_processed_coefs(self,animal,processed_coefs):
+        """Given a set of contour reconstructions generated by PCA, evaluates them against the corresponding frame of data. This evaluation takes three steps: 1) recenter and rotate the contour to the original position in the frame of video. 2) Calculate distance to the original contour. 3) get the image in a bounding box around the processed coefficient. 
+        
+        :param animal: string identifying the animal that we will be using 
+        :param processed_coefs: 
+        """
+        ## Get the contour 
+
+
+
+        
 
 
 
