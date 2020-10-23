@@ -84,7 +84,7 @@ labeled_data = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/Collecte
 additionalpath = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/"
 
 if __name__ == "__main__":
-    md = initialize_doc()
+    md = initialize_doc({"parent":"summary_week_10_9_20","prev":"from_contours_to_shape_model"})
     md.new_header(title = "Summary",level = 1)
     md.new_paragraph("We can use the contours extracted by "+md.new_inline_link(link = "./get_statistical_shape_model.md`",text = "the previous file")+" to create a shape model. Let's focus for now on creating shape models for the dam, as this is the most reliable. ")
     all_contours = joblib.load("./script_data/all_contours")

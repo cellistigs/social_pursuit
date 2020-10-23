@@ -1,11 +1,14 @@
 
-Script documentation for file: from_contours_to_shape_model, Updated on:2020-10-23 18:42:14.365879
+Script documentation for file: from_contours_to_shape_model, Updated on:2020-10-23 18:51:31.936028
 ==================================================================================================
-
+ 
+  
+**parent file: [summary_week_10_9_20](./summary_week_10_9_20.md)**  
+**prev file: [get_statistical_shape_model](./get_statistical_shape_model.md)**
 # Summary
 
 
-We can use the contours extracted by [the previous file](./get_statistical_shape_model.md`) to create a shape model. Let's focus for now on creating shape models for the dam, as this is the most reliable.   
+We can use the contours extracted by [the previous file](./get_statistical_shape_model.md) to create a shape model. Let's focus for now on creating shape models for the dam, as this is the most reliable.   
 <img src="./images/mean_shape.png" />
 
 We first calculate the mean shape for both animal contours from the training data. Note how reasonable this mean shape looks despite known issues: the existence of the wand, the fact that we lose part of the virgin's head sometimes. We indicate with black x marks the starting point of the contours. We have to believe that we will only get more refined contours as we keep working with this data. Beyond cleaning up the preprocessing, one interesting possibility would be to perform data augmentation by symmetrizing the original contour dataset. We will revisit this later on in this same document. For now, let us explore the shape space we have generated using principal components analysis.
