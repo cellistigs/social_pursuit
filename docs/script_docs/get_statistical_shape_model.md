@@ -1,5 +1,5 @@
 
-Script documentation for file: get_statistical_shape_model, Updated on:2020-10-21 11:50:14.965521
+Script documentation for file: get_statistical_shape_model, Updated on:2020-10-23 18:49:41.176273
 =================================================================================================
  
   

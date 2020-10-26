@@ -79,14 +79,107 @@ def get_pca(n_componenets,reorganized_data):
     pcadict = data.get_pca(reorganized,n_components)
     return pcadict
 
+
+@memory.cache
+def plot_perturbations(data,dampca,n_components):
+    indexvec = np.arange(n_components)
+    onehots = [indexvec == i for i in range(4)]
+    perturbation_vecs = [2*oh*i*edges for oh in onehots for i in [-1,1]]
+    perturbation_vecs.append(np.zeros(n_components,))
+    perturbation_vecs = np.array(perturbation_vecs)
+
+    assert perturbation_vecs.shape == (9,n_components)
+    damvecs = data.get_contour_from_pc(dampca,perturbation_vecs)
+    fig,ax = plt.subplots(3,3,sharey = True)
+    ax[1,0].plot(*damvecs[0,:,:])
+    ax[1,0].set_title("pc 1, -2")
+    ax[1,2].plot(*damvecs[1,:,:])
+    ax[1,2].set_title("pc 1, +2")
+    ax[0,1].plot(*damvecs[2,:,:])
+    ax[0,1].set_title("pc 2, -2")
+    ax[2,1].plot(*damvecs[3,:,:])
+    ax[2,1].set_title("pc 2, +2")
+    ax[0,0].plot(*damvecs[4,:,:])
+    ax[0,0].set_title("pc 3, -2")
+    ax[2,2].plot(*damvecs[5,:,:])
+    ax[2,2].set_title("pc 3, +2")
+    ax[2,0].plot(*damvecs[6,:,:])
+    ax[2,0].set_title("pc 4, -2")
+    ax[0,2].plot(*damvecs[7,:,:])
+    ax[0,2].set_title("pc 4, +2")
+    ax[1,1].plot(*damvecs[8,:,:])
+    ax[1,1].set_title("mean")
+    [axy.axis("equal") for a in ax for axy in a]
+    plt.tight_layout()
+    return fig
+
+@memory.cache
+def scatterplot_virg_dam_pca(dampca_items,virgpca_items):
+    fig,ax = plt.subplots(5,5)
+    for i in range(5):
+        for j in range(5):
+            ax[i,j].scatter(dampca_items["weights"][:,i],dampca_items["weights"][:,j],s = 0.5,label = "Dam")
+            ax[i,j].scatter(virgpca_items["weights"][:,i],virgpca_items["weights"][:,j],s = 0.5,label = "Virgin")
+            ax[i,j].axis("off")
+            ax[i,j].set_title("PC {} vs. PC {}".format(i+1,j+1))
+    plt.legend()
+    plt.tight_layout()
+            
+    fig = plt.gcf()
+    return fig
+
+@memory.cache
+def aggregate_evaluations(damweights,dampca,valid_indices,all_fds):
+    all_dists ={} 
+    all_ims ={} 
+    weights_index = 10
+    print(all_fds.keys())
+    for weights_index,wi in enumerate(valid_indices):
+        contour_reconstructed = data.get_contour_from_pc(dampca,damweights[weights_index:weights_index+1,:])
+        fd = all_fds[wi]
+        dist,img = fd.evaluate_processed_coefs("dam",contour_reconstructed[0,:,:])
+        all_dists[wi] = dist
+        all_ims[wi] = img
+        print(wi)
+    vals = all_dists.values()
+    n,bins,patches = plt.hist(vals)
+    fig = plt.gcf()
+    return fig,all_dists,all_ims
+
+@memory.cache
+def plot_outlier_frames(all_ims,all_dists,all_fds):
+    all_figs ={} 
+
+    outlier_frames = {ind:all_ims[ind] for ind,dist in all_dists.items() if dist > 50}
+    for ind,frame in outlier_frames.items():
+        contour = all_fds[ind].contours["dam"]
+        ## Just show a box around the actual contours: 
+        mins = np.min(contour,axis = 0).astype(int)-20
+        mins[mins<0] = 0
+        maxs = np.max(contour,axis = 0).astype(int)+20
+
+        xcoords = np.array([mins[0],maxs[0]])
+        ycoords = np.array([mins[1],maxs[1]])
+        print(xcoords,ycoords)
+
+        fig,ax = plt.subplots()
+        plt.imshow(frame[slice(*xcoords),slice(*ycoords)])
+        plt.plot(contour[:,1]-mins[1],contour[:,0]-mins[0],label = "original_contour")
+        plt.title("Comparison of PCA vs. original contour for outlier frame {} (dist = {})".format(ind,str(all_dists[ind])[:4]))
+        plt.legend()
+        plt.tight_layout()
+        fig = plt.gcf()
+        all_figs[ind]=fig
+    return all_figs
+
 datapath = os.path.join("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat")
 labeled_data = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/CollectedData_Taiga.h5"
 additionalpath = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/"
 
 if __name__ == "__main__":
-    md = initialize_doc({"parent":"summary_week_10_9_20","prev":"from_contours_to_shape_model"})
+    md = initialize_doc({"parent":"summary_week_10_9_20","prev":"get_statistical_shape_model"})
     md.new_header(title = "Summary",level = 1)
-    md.new_paragraph("We can use the contours extracted by "+md.new_inline_link(link = "./get_statistical_shape_model.md`",text = "the previous file")+" to create a shape model. Let's focus for now on creating shape models for the dam, as this is the most reliable. ")
+    md.new_paragraph("We can use the contours extracted by "+md.new_inline_link(link = "./get_statistical_shape_model.md",text = "the previous file")+" to create a shape model. Let's focus for now on creating shape models for the dam, as this is the most reliable. ")
     all_contours = joblib.load("./script_data/all_contours")
     data = LabeledData(labeled_data,additionalpath)
 
@@ -138,55 +231,60 @@ if __name__ == "__main__":
     edges = np.sqrt(dampca.explained_variance_)
 
     ## Now generate perturbations in the first four directions:
+    fig = plot_perturbations(data,dampca,n_components)
 
-    indexvec = np.arange(n_components)
-    onehots = [indexvec == i for i in range(4)]
-    perturbation_vecs = [2*oh*i*edges for oh in onehots for i in [-1,1]]
-    perturbation_vecs.append(np.zeros(n_components,))
-    perturbation_vecs = np.array(perturbation_vecs)
-
-    assert perturbation_vecs.shape == (9,n_components)
-    damvecs = data.get_contour_from_pc(dampca,perturbation_vecs)
-    fig,ax = plt.subplots(3,3,sharey = True)
-    ax[1,0].plot(*damvecs[0,:,:])
-    ax[1,0].set_title("pc 1, -2")
-    ax[1,2].plot(*damvecs[1,:,:])
-    ax[1,2].set_title("pc 1, +2")
-    ax[0,1].plot(*damvecs[2,:,:])
-    ax[0,1].set_title("pc 2, -2")
-    ax[2,1].plot(*damvecs[3,:,:])
-    ax[2,1].set_title("pc 2, +2")
-    ax[0,0].plot(*damvecs[4,:,:])
-    ax[0,0].set_title("pc 3, -2")
-    ax[2,2].plot(*damvecs[5,:,:])
-    ax[2,2].set_title("pc 3, +2")
-    ax[2,0].plot(*damvecs[6,:,:])
-    ax[2,0].set_title("pc 4, -2")
-    ax[0,2].plot(*damvecs[7,:,:])
-    ax[0,2].set_title("pc 4, +2")
-    ax[1,1].plot(*damvecs[8,:,:])
-    ax[1,1].set_title("mean")
-    [axy.axis("equal") for a in ax for axy in a]
-    plt.tight_layout()
     save_and_insert_image(md,fig,"../docs/script_docs/images/pca_one_unit_exploration.png")
 
     md.new_paragraph("We can see that the first principal captures leaning to the left or right, with a potential displacement of the centroid as well. The second principal component seems to capture elongation and shrinking. PC 3 and 4 seem to capture these behaviors, but at more extreme deformations. Note that the orthogonality of PCs is applied in the space of fourier descriptors, which may lead to non-orthogonal seeming deformations of the shape. However, all of these shapes appear to capture real deformations of the mouse contour- we can explore this hypothesis further by looking at the distribution of points in PC space. Although it is not conclusive, we can compare the distribution of the dam's positions to those of the virgins in terms of pc weights, and look at the distributions comparatively- we see that the virgin distribution has a much higher proportion of outlier points, that most likely correspond to frames where the wand has not been captured, or there are issues with the headplate. We will examine these noise hypotheses more closely later.")
-    fig,ax = plt.subplots(5,5)
-    for i in range(5):
-        for j in range(5):
-            ax[i,j].scatter(dampca_items["weights"][:,i],dampca_items["weights"][:,j],s = 0.5,label = "Dam")
-            ax[i,j].scatter(pcadict["virgin"]["weights"][:,i],pcadict["virgin"]["weights"][:,j],s = 0.5,label = "Virgin")
-            ax[i,j].axis("off")
-            ax[i,j].set_title("PC {} vs. PC {}".format(i+1,j+1))
-    plt.legend()
-    plt.tight_layout()
-            
-    fig = plt.gcf()
+
+    virgpca_items = pcadict["virgin"]
+    fig = scatterplot_virg_dam_pca(dampca_items,virgpca_items)
     save_and_insert_image(md,fig,"../docs/script_docs/images/plot_pc1_2.png")
 
     testfd = all_fds[0] 
+    md.new_paragraph("If we refit some of the recovered weights to the original images and contours, we can evaluate how well pca based contours recover the true data.")
+    damweights = pcadict["dam"]["weights"]
+    valid_indices = reorganized["indices"]
 
-    print(testfd.mouseangles,testfd.points[:,3,:])
+    #def aggregate_evaluations(damweights,dampca,valid_indices,all_fds):
+    #all_dists ={} 
+    #all_ims ={} 
+    #weights_index = 10
+    #print(all_fds.keys())
+    #for weights_index,wi in enumerate(valid_indices):
+    #    contour_reconstructed = data.get_contour_from_pc(dampca,damweights[weights_index:weights_index+1,:])
+    #    fd = all_fds[wi]
+    #    dist,img = fd.evaluate_processed_coefs("dam",contour_reconstructed[0,:,:])
+    #    all_dists[wi] = dist
+    #    all_ims[wi] = img
+    #    print(wi)
+    #vals = all_dists.values()
+    #n,bins,patches = plt.hist(vals)
+    #fig = plt.gcf()
+    #return fig,all_dists,all_ims
+    fig,all_dists,all_ims = aggregate_evaluations(damweights,dampca,valid_indices,all_fds)
+
+    md.new_paragraph("First, we can evaluate a distance metric between the original contour shape and the new contour shape across the entire training set. The distance used here is closely related to the procrustes distance: a euclidean norm on shape keypoints assuming optimal translation and rotation between the two shapes. In our case, we fix translations and rotations to respect the labeled marker points from DLC, instead of aligning the shapes directly. This can be thought of as a lower bound (?) to the procrustes distance (can you prove this?)")
+    save_and_insert_image(md,fig,"../docs/script_docs/images/procrustes_distance_lb.png")
+    md.new_paragraph("We see that in general, the distance distribution clusters in the range of 20-40 units, with a few outliers. Let us examine these outlier frames in more detail:")
+
+    
+    all_figs = plot_outlier_frames(all_ims,all_dists,all_fds)
+
+    for figind,fig in all_figs.items():
+        save_and_insert_image(md,fig,"../docs/script_docs/images/outlier_contour{}.png".format(figind))
+
+    md.new_paragraph("We have plotted here three outlier frames, with the original contour given in blue, and the pca reconstruction providing the silhouette of the actual image. It appears that the PCA reconstruction acts as a smoothing operation, and does not in general remove key features of the original image. ")
+
+
+
+    
+
+
+
+
+
+
 
 
     md.create_md_file()
