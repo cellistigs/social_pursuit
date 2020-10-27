@@ -1,5 +1,5 @@
 
-Script documentation for file: from_contours_to_shape_model, Updated on:2020-10-26 17:05:02.099369
+Script documentation for file: from_contours_to_shape_model, Updated on:2020-10-26 22:22:40.170126
 ==================================================================================================
  
   
@@ -35,4 +35,9 @@ We see that in general, the distance distribution clusters in the range of 20-40
 <img src="./images/outlier_contour21.png" />  
 <img src="./images/outlier_contour65.png" />
 
-We have plotted here three outlier frames, with the original contour given in blue, and the pca reconstruction providing the silhouette of the actual image. It appears that the PCA reconstruction acts as a smoothing operation, and does not in general remove key features of the original image. 
+We have plotted here three outlier frames, with the original contour given in blue, and the pca reconstruction providing the silhouette of the actual image. It appears that the PCA reconstruction acts as a smoothing operation, and does not in general remove key features of the original image. We will proceed with PCA reconstruction contours, and build a joint distribution of the contours and the point locations.
+
+We will fit a gaussian distribution to the marker points and contours, and observe how well they are able to reconstruct each other.
+
+We will first use the points to reconstruct pca weights, and look at the resulting distance metrics in contour space.  
+<img src="./images/reconstruction_distance_hists.png" />
