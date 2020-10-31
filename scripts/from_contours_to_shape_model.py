@@ -274,17 +274,68 @@ if __name__ == "__main__":
     for figind,fig in all_figs.items():
         save_and_insert_image(md,fig,"../docs/script_docs/images/outlier_contour{}.png".format(figind))
 
-    md.new_paragraph("We have plotted here three outlier frames, with the original contour given in blue, and the pca reconstruction providing the silhouette of the actual image. It appears that the PCA reconstruction acts as a smoothing operation, and does not in general remove key features of the original image. ")
+    md.new_paragraph("We have plotted here three outlier frames, with the original contour given in blue, and the pca reconstruction providing the silhouette of the actual image. It appears that the PCA reconstruction acts as a smoothing operation, and does not in general remove key features of the original image. We will proceed with PCA reconstruction contours, and build a joint distribution of the contours and the point locations.")
 
 
+    md.new_paragraph("We will fit a gaussian distribution to the marker points and contours, and observe how well they are able to reconstruct each other.")
+    animal = "dam"
+    mean,cov = data.get_gaussian_contour_pose_distribution(animal,damweights,all_fds)
+    print(mean,np.linalg.eigvals(cov))
 
-    
+    md.new_paragraph("We will first use the points to reconstruct pca weights, and look at the resulting distance metrics in contour space.")
+    all_processed_points = np.array([fd.process_points()[:,:,1] for fd in all_fds.values()])
+    weights = data.get_MAP_weights(mean,cov,all_processed_points)
 
+    contours = data.get_contour_from_pc(dampca,weights)
+    out = all_fds[1].superimpose_centered_contour("dam",contours[1,:,:])
+    plt.plot(out[0,:],out[1,:],label = "contour given by conditioning")
+    plt.plot(all_fds[1].points[1,:,1],all_fds[1].points[0,:,1],"x",label = "original points")
+    plt.plot(all_fds[1].contours["dam"][:,0],all_fds[1].contours["dam"][:,1],label = "original contour")
+    plt.legend()
+    fig = plt.gcf()
+    save_and_insert_image(md,fig,"../docs/script_docs/images/gaussian_conditioning_contour.png")
+    md.new_paragraph("We can see that a gaussian model seems to give us pretty reasonable contours. We can measure this quatitatively by comparing the distribution of shape distances, just as we did with the pca reconstructed contours.")
+    all_dists = {} 
+    all_images = {}
+    for f,(fi,fd) in enumerate(all_fds.items()):
+        contour = contours[f]
+        contour[contour> np.array([[700],[480]])] = np.nan 
+        dist,image = fd.evaluate_processed_coefs("dam",contour,image = True)
+        all_dists[fi] = dist
+        all_images[fi] = image
+    plt.hist(all_dists.values())
+    fig = plt.gcf()
+    save_and_insert_image(md,fig,"../docs/script_docs/images/reconstruction_distance_hists.png")
+    md.new_paragraph("We see that the distribution of shape distances has a much longer tail when we condition on part locations.")
 
+    all_figs ={} 
 
+    outlier_frames = {ind:all_images[ind] for ind,dist in all_dists.items() if dist > 100}
+    for ind,frame in outlier_frames.items():
+        contour = all_fds[ind].contours["dam"]
+        ## Just show a box around the actual contours: 
+        mins = np.min(contour,axis = 0).astype(int)-20
+        mins[mins<0] = 0
+        maxs = np.max(contour,axis = 0).astype(int)+20
 
+        xcoords = np.array([mins[0],maxs[0]])
+        ycoords = np.array([mins[1],maxs[1]])
 
+        fig,ax = plt.subplots()
+        plt.imshow(frame[slice(*xcoords),slice(*ycoords)])
+        plt.plot(contour[:,1]-mins[1],contour[:,0]-mins[0],label = "original_contour")
+        plt.title("Comparison of PCA vs. original contour for outlier frame {} (dist = {})".format(ind,str(all_dists[ind])[:4]))
+        plt.legend()
+        plt.tight_layout()
+        fig = plt.gcf()
+        all_figs[ind]=fig
 
+    for figind,fig in all_figs.items():
+        save_and_insert_image(md,fig,"../docs/script_docs/images/outlier_contour_gauss{}.png".format(figind))
+
+    md.new_paragraph("However, we see that even outlier contours maintain a pretty high degree of fidelity to the underlying image- it appears that conditioning on the marker points provides a very reliable reconstruction of the contour. While this is to some degree expected for points that this gaussian was trained on, the resulting contours sometimes look to be more accurate than the original, suggesting there is something about our representation that correctly captures the variation of the data. Areas wehre we see some problems come in capturing very intensely bending contours. Note that this is just the MAP estimate- if we had a good way of incorporating image information, we might be able to bias this towards an even better representation.")
+    md.new_paragraph("We have done some proof of concept studies to test the feasibility of fine-tuning these contours to better capture obvious cases where the pca contour is over or underestimatimating the actual mouse (see frame 79). It appears that doing gradient descent on the PCA weights directly is not stable, at least for the objectives that I looked at. However, doing gradient descent on the fourier parametrizations of the contours does work "+md.new_inline_link(text = "(see here)",link = "./test_jax.md")+". I will therefore look at the potential to fine-tune these contours using a cost regularized by the posterior probability given the location of annotated markers.")
+    md.new_paragraph("Once I have implemented this fine tuning, I will have a custom-built distribution relating contours to marker points, as well as a mechanism for fine tuning contours directly to the image. The next step is to apply these methods to the raw data, specifically in the analysis of pursuit events. For each pursuit event, I will use our new distribution to first detect problem frames, and then correct these problem frames using information from neighboring frames (initializing point reassignment from neighboring frames, for example.)")
 
 
     md.create_md_file()
