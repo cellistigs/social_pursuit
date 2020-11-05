@@ -3,6 +3,7 @@ import os
 import numpy as np
 from social_pursuit.data import Polar,PursuitVideo,mkdir_notexists
 from social_pursuit.labeled import LabeledData,FourierDescriptor
+from social_pursuit.train import Contour_Optimizer
 from scipy.io import loadmat
 from script_doc_utils import initialize_doc,insert_image,save_and_insert_image,get_relative_image_path,insert_vectors_as_table
 from joblib import Memory
@@ -207,6 +208,8 @@ if __name__ == "__main__":
     fourierdescriptors = process_contours(all_fds)
     ## Generate a corrected set of fourier components
     fig,reorganized = plot_basic_statistics(all_fds,fourierdescriptors)
+    indices_map = reorganized["indices"]
+
     save_and_insert_image(md,fig,"../docs/script_docs/images/mean_shape.png")
     md.new_paragraph("We first calculate the mean shape for both animal contours from the training data. Note how reasonable this mean shape looks despite known issues: the existence of the wand, the fact that we lose part of the virgin's head sometimes. We indicate with black x marks the starting point of the contours. We have to believe that we will only get more refined contours as we keep working with this data. Beyond cleaning up the preprocessing, one interesting possibility would be to perform data augmentation by symmetrizing the original contour dataset. We will revisit this later on in this same document. For now, let us explore the shape space we have generated using principal components analysis.")
     md.new_paragraph("We will now describe the pc space spanned by our training dataset of shapes. We will first construct this pc space, then we will consider the shapes generated at specific loadings.")
@@ -246,22 +249,6 @@ if __name__ == "__main__":
     damweights = pcadict["dam"]["weights"]
     valid_indices = reorganized["indices"]
 
-    #def aggregate_evaluations(damweights,dampca,valid_indices,all_fds):
-    #all_dists ={} 
-    #all_ims ={} 
-    #weights_index = 10
-    #print(all_fds.keys())
-    #for weights_index,wi in enumerate(valid_indices):
-    #    contour_reconstructed = data.get_contour_from_pc(dampca,damweights[weights_index:weights_index+1,:])
-    #    fd = all_fds[wi]
-    #    dist,img = fd.evaluate_processed_coefs("dam",contour_reconstructed[0,:,:])
-    #    all_dists[wi] = dist
-    #    all_ims[wi] = img
-    #    print(wi)
-    #vals = all_dists.values()
-    #n,bins,patches = plt.hist(vals)
-    #fig = plt.gcf()
-    #return fig,all_dists,all_ims
     fig,all_dists,all_ims = aggregate_evaluations(damweights,dampca,valid_indices,all_fds)
 
     md.new_paragraph("First, we can evaluate a distance metric between the original contour shape and the new contour shape across the entire training set. The distance used here is closely related to the procrustes distance: a euclidean norm on shape keypoints assuming optimal translation and rotation between the two shapes. In our case, we fix translations and rotations to respect the labeled marker points from DLC, instead of aligning the shapes directly. This can be thought of as a lower bound (?) to the procrustes distance (can you prove this?)")
@@ -334,7 +321,53 @@ if __name__ == "__main__":
         save_and_insert_image(md,fig,"../docs/script_docs/images/outlier_contour_gauss{}.png".format(figind))
 
     md.new_paragraph("However, we see that even outlier contours maintain a pretty high degree of fidelity to the underlying image- it appears that conditioning on the marker points provides a very reliable reconstruction of the contour. While this is to some degree expected for points that this gaussian was trained on, the resulting contours sometimes look to be more accurate than the original, suggesting there is something about our representation that correctly captures the variation of the data. Areas wehre we see some problems come in capturing very intensely bending contours. Note that this is just the MAP estimate- if we had a good way of incorporating image information, we might be able to bias this towards an even better representation.")
+    
+
     md.new_paragraph("We have done some proof of concept studies to test the feasibility of fine-tuning these contours to better capture obvious cases where the pca contour is over or underestimatimating the actual mouse (see frame 79). It appears that doing gradient descent on the PCA weights directly is not stable, at least for the objectives that I looked at. However, doing gradient descent on the fourier parametrizations of the contours does work "+md.new_inline_link(text = "(see here)",link = "./test_jax.md")+". I will therefore look at the potential to fine-tune these contours using a cost regularized by the posterior probability given the location of annotated markers.")
+    md.new_paragraph("Let's try implementing fine tuning.")
+    animal = "dam"
+    animalid = {"dam":1,"virgin":0}[animal]
+    co = Contour_Optimizer(mean,cov,pcadict[animal]["pca"]) 
+    nb_contour = 14 
+    ## We found that initialization really matters here :(
+    contour_index = indices_map[nb_contour]
+    fd = all_fds[contour_index]
+    init = co.pca_imap(weights[nb_contour]) #co.pca_imap(pcadict[animal]["weights"][nb_contour]) 
+    eval_func = co.eval_posterior(fd.process_points()[:,:,1],co.mean,co.cov)
+
+    iterations = 1400
+    #image_crop = {"y":(150,300),"x":(200,None)}
+    bodymins = np.min(fd.points[:,:,animalid],axis = 1).astype(int)
+    bodymaxs = np.max(fd.points[:,:,animalid],axis = 1).astype(int)
+    xlims = (bodymins[0]-10,bodymaxs[0]+10)
+    ylims = (bodymins[1]-10,bodymaxs[1]+10)
+    image_crop = {"y":ylims,"x":xlims}
+    #image_crop = {"y":(350,None),"x":(0,120)}
+    print("Starting on Contour {}".format(contour_index))
+    v,c = co.train(fd,init,animal,iterations = iterations,image_crop=image_crop,im_sigma = 5,weight = 20,step_size = 1)
+
+    fig,ax = plt.subplots(3,figsize = (20,20))
+    for i,di in enumerate([0,-1]):
+        center = fd.points[:,3,1][:,None]
+        contour = np.fft.irfft(c[di])
+        ## Just show a box around the actual contours: 
+        mins = np.min(contour,axis = 0).astype(int)-20
+        mins[mins<0] = 0
+        maxs = np.max(contour+center,axis = 0).astype(int)+20
+
+        xcoords = np.array([mins[0],maxs[0]])+np.flip(center)
+        ycoords = np.array([mins[1],maxs[1]])+np.flip(center)
+
+        procrust,image = fd.evaluate_processed_coefs(animal,contour,image = True)
+        #ax[i].imshow(image[slice(*xcoords),slice(*ycoords)])
+        ax[i].imshow(image[slice(*image_crop["y"]),slice(*image_crop["x"]),:])
+        ax[2].plot(*contour,label = str(di))
+    plt.legend()
+    fig = plt.gcf()
+    ax[2].axis("equal")
+
+    save_and_insert_image(md,fig,"../docs/script_docs/images/training_toy_example_iterations_{}.png".format(iterations))
+
     md.new_paragraph("Once I have implemented this fine tuning, I will have a custom-built distribution relating contours to marker points, as well as a mechanism for fine tuning contours directly to the image. The next step is to apply these methods to the raw data, specifically in the analysis of pursuit events. For each pursuit event, I will use our new distribution to first detect problem frames, and then correct these problem frames using information from neighboring frames (initializing point reassignment from neighboring frames, for example.)")
 
 
