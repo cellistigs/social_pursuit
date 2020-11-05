@@ -1,5 +1,5 @@
 
-Script documentation for file: from_contours_to_shape_model, Updated on:2020-10-30 20:15:07.362713
+Script documentation for file: from_contours_to_shape_model, Updated on:2020-11-05 10:58:27.460322
 ==================================================================================================
  
   
@@ -82,5 +82,8 @@ We see that the distribution of shape distances has a much longer tail when we c
 However, we see that even outlier contours maintain a pretty high degree of fidelity to the underlying image- it appears that conditioning on the marker points provides a very reliable reconstruction of the contour. While this is to some degree expected for points that this gaussian was trained on, the resulting contours sometimes look to be more accurate than the original, suggesting there is something about our representation that correctly captures the variation of the data. Areas wehre we see some problems come in capturing very intensely bending contours. Note that this is just the MAP estimate- if we had a good way of incorporating image information, we might be able to bias this towards an even better representation.
 
 We have done some proof of concept studies to test the feasibility of fine-tuning these contours to better capture obvious cases where the pca contour is over or underestimatimating the actual mouse (see frame 79). It appears that doing gradient descent on the PCA weights directly is not stable, at least for the objectives that I looked at. However, doing gradient descent on the fourier parametrizations of the contours does work [(see here)](./test_jax.md). I will therefore look at the potential to fine-tune these contours using a cost regularized by the posterior probability given the location of annotated markers.
+
+Let's try implementing fine tuning.  
+<img src="./images/training_toy_example_iterations_1400.png" />
 
 Once I have implemented this fine tuning, I will have a custom-built distribution relating contours to marker points, as well as a mechanism for fine tuning contours directly to the image. The next step is to apply these methods to the raw data, specifically in the analysis of pursuit events. For each pursuit event, I will use our new distribution to first detect problem frames, and then correct these problem frames using information from neighboring frames (initializing point reassignment from neighboring frames, for example.)
