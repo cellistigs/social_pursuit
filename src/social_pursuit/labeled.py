@@ -552,6 +552,7 @@ class LabeledData(object):
         '''
 
         :param indices:
+        :return: a list of binarized frames.
         """
         frames = self.get_images_grayscale(indices)
         ## If including the registration frame, its value is not that good for the segmetnation of mice because it includes too much other garbage. Use the mean of the other thresholds instead.
@@ -574,6 +575,7 @@ class LabeledData(object):
         """Given a set of binarized images, clean them up with morphological opening. 
 
         :param binaries: a list of binary images that represent the training data. Note that the animal should be assigned to ONE, not 0, meaning we should use morphological closing (dilation followed by erosion.)   
+        :return: list of image frames. 
         """
         cleaned = []
         for image in binaries:
@@ -614,7 +616,7 @@ class LabeledData(object):
         pointarray = {e:[] for e in to_edit} 
 
         if dryrun:
-            pointarray_default = {"dam":[[0,0],[1,1]],"virgin":[[4,4],[40,40]]}
+            pointarray = {"dam":[[0,0],[1,1]],"virgin":[[4,4],[40,40]]}
 
         else:
             for entry in to_edit:
@@ -681,6 +683,7 @@ class LabeledData(object):
             for k,val in auxpoints.items():
                 valarray = np.array(val)
                 assert k in ["dam","virgin"]
+                print(valarray.shape)
                 assert valarray.shape[-1] == 2 
         vpint = vposes.astype(int)
         vpinterp = self.link_parts(vpint.T)
@@ -893,38 +896,6 @@ class LabeledData(object):
         all_data = {"data":np.stack(all_animals,axis = -1),"fdtype":fdtype,"indices":indices,"animals":animals,"freqs":fourierdicts[indices[0]][animal]["freqs"]}
         return all_data
 
-    def get_shape_statistics(self,fourierdicts,maxcomponents = 30,fps = 30):
-        """Given a set of fourier coefficent representations for animal contours, calculates a mean and standard deviation for the shape statistics. Assumes that these representations have been normalized for starting point, rotation, and location.
-
-        :param fourierdicts: A dictionary of dictionaries, with keys giving training frame indices and values giving the fourier representation of corresponding contours. Each value is a dictionary specifying the coefficients and frequencies of the corresponding representation.
-        :param maxcomponents: maximum pairs of frequencies to consider when constructing statistics. 
-        :param fps: fps of the video, used to calibrate frequencies. asssumed 30 fps.
-        :return: dictionary with keys giving statistic names (mean,std) and values giving dictionaries containing per animal shape statistics.
-        """
-        statsdict = {} #"virgin, dam __ mean, std"
-        all_contour_dicts = list(fourierdicts.values())
-        keys = all_contour_dicts[0].keys()
-        for key in keys:
-            contours = [a[key] for a in all_contour_dicts]
-            mean = np.mean(np.array(contours),axis = 0) 
-            std = np.std(np.array(contours),axis = 0)
-            statsdict[key] = {"mean":mean,"std":std}
-        return statsdict
-
-
-        components_per_side = int(maxcomponents/2)
-
-        data_array = {"dam":[],"virgin":[]}
-        maxlen = 0
-        for f,fentry in fourierdict.items():
-            for d in data_array.keys():
-
-                data_array[d].append(fentry)
-
-        ## Gross, iterating twice
-        for d,dvals in data_array:
-            pass
-
     def get_pca(self,organized_fourierdicts,n_components = None):
         """Applies PCA to the organized fourier dictionaries, and returns the fitted pca object. A wrapper for sklearn.decomposition.PCA, with appropriate data preprocessing steps. For elliptic fourier series, the fourier transform of each coordinate is conjugate symmetric, so we can just take the positive part of the series without losing information. For the complex fourier series, we must take the whole thing.  
         :param organized_fourierdicts: Assumes that one has applied the method `organize_fourierdicts` to a dictionary of fourier dictionaries.  
@@ -947,7 +918,7 @@ class LabeledData(object):
 
             virginweights = virgpca.fit_transform(data_xy[:,:,0])
             damweights = dampca.fit_transform(data_xy[:,:,1])
-            pcadict = {"virgin":{"pca":virgpca,"weights":virginweights},"dam":{"pca":dampca,"weights":damweights}}
+            pcadict = {"virgin":{"pca":virgpca,"weights":virginweights},"dam":{"pca":dampca,"weights":damweights},"indices":organized_fourierdicts["indices"]}
         else:
             raise NotImplementedError("Only implemented elliptic transform features so far.")
             
@@ -956,7 +927,7 @@ class LabeledData(object):
     def get_contour_from_pc(self,pca,weights):
         """When given a fit pca object and vector of pc weights, returns a contour of mouse weights that corresponds to that set of weights as applied to the provided pca model. 
         :param pca: A pca model that has been fit to contour data. 
-        :param weights: A set of vectors, with overall shape (m,n_components) where n_components is the number of components expected by the pca model and m is the number of vectors we would like to fit.
+        :param weights: A set of vectors, with overall shape (n_samples,n_components) where n_components is the number of components expected by the pca model and m is the number of vectors we would like to fit.
 
         """
         assert pca.n_components == weights.shape[1]
@@ -968,12 +939,81 @@ class LabeledData(object):
         xy = np.fft.irfft(reshaped_complex)
         return xy#np.stack([x,y],axis = -1)
 
-        
+    def get_gaussian_contour_pose_distribution(self,animal,pca_weights,all_fds):
+        """ Given an array of pca weights and dictionary of fourier descriptors corresponding to the training frames they belong to, constructs a multivariate gaussian distribution in which the first 8 points give the relative marker points of the animal (relative to the centroid and rotated so that the nose tip is facing upwards), and the remaining components give the pca weights of the contour's fourier decomposition. Note that we will require the existence of a trained pca object in order to make use of this distribution. 
 
+        :param animal: An indicator of the animal we want to solve the problem for. Will be virgin or dam. 
+        :param pca_weights: A set of pc weights of shape (number_frames,number_features). 
+        :param all_fds: A dictionary of fourierdescriptor objects, with frame indices as keys and FourierDescriptor objects as values.
+        :return: The mean and variance of a gaussian distribution corresponding to the given data. 
+        """
+        dataindices = {"dam":1,"virgin":0}
+        assert animal in dataindices.keys()
+        ## First form the data: 
+        remove_centroid = np.array([0,1,2,4])
+        ## Get the releant animal, remove the centroid (will be zero, and flatten the xy coordinates.)
+        all_points_list = [all_fds[ind].process_points() for ind in all_fds.keys()]
 
+        relevant_poses = np.stack([all_fds[ind].process_points()[:,remove_centroid,dataindices[animal]].flatten(order = "F") for ind in all_fds.keys()],axis = 0)
+        for i in range(len(relevant_poses)):
+            relevant_pose = relevant_poses[i,:]
+            pose = relevant_pose.reshape(2,4,order = "F")
 
-    def get_multivariate_pose_distribution(self,fourierdict):
-        pass
+        concat_data = np.concatenate([relevant_poses,pca_weights],axis =1)
+        mean = np.mean(concat_data,axis = 0)
+        cov = np.cov(concat_data,rowvar = False)
+        return mean,cov
+    
+    def get_MAP_markers(self,mean,cov,contour_pc_weights):
+        """When given the parameters of a gaussian + a contour, will return the MAP estimate for the animal marker locations based on that contour.  
+        :param mean: the mean vector for the multivariate gaussian we are trying to fit.  
+        :param cov: the covariance matrix for the multivariate gaussian we are trying to fit. 
+        :param contour: a set of pc weights of shape (n_samples,n_features) corresponding to the contours that we are conditioning on.
+        :return: an array of shape (n_samples,xy,partid) providing the positions of the markers given the contour.  
+        """
+        mean_markers = mean[:8]
+        mean_contour = mean[8:]
+        cov_mm = cov[:8,:8]
+        cov_mc = cov[:8,8:]
+        cov_cm = cov[8:,:8]
+        cov_cc = cov[8:,8:]
+
+        assert len(contour_pc_weights.shape) == 2
+        assert contour_pc_weights.shape[1] == len(mean_contour) 
+        prefactor = contour_pc_weights-mean_contour[None,:]
+        ## We have to transpose to make the matrix multiplcation work right.
+        factor_d = np.matmul(cov_mc,np.linalg.solve(cov_cc,prefactor.T)).T
+
+        markers_flat = mean_markers[None,:]+factor_d
+
+        markers = markers_flat.reshape(len(contour_pc_weights),2,4,order = "F")
+
+        return markers 
+
+    def get_MAP_weights(self,mean,cov,markers):
+        """When given the parameters of a gaussian + a contour, will return the MAP estimate for the animal marker locations based on that contour.  
+        :param mean: the mean vector for the multivariate gaussian we are trying to fit.  
+        :param cov: the covariance matrix for the multivariate gaussian we are trying to fit. 
+        :param markers: the pc weights in an array of shape (n_samples,xy,partid) corresponding to the contour that we are conditioning on.
+        :return: an array in of shape (n_samples,n_components) providing the positions of the markers given the contour.  
+        """
+        assert markers.shape[1:] == (2,5) 
+        noncent = np.array([0,1,2,4])
+        markers_nocent = markers[:,:,noncent]
+
+        mean_markers = mean[:8]
+        mean_contour = mean[8:]
+        cov_mm = cov[:8,:8]
+        cov_mc = cov[:8,8:]
+        cov_cm = cov[8:,:8]
+        cov_cc = cov[8:,8:]
+
+        ## Flatten markers:
+        markers_flat = markers_nocent.reshape(-1,8,order = "F")
+
+        prefactor = markers_flat-mean_markers[None,:]
+        factor = np.matmul(cov_cm,np.linalg.solve(cov_mm,prefactor.T)).T
+        return mean_contour[None,:]+factor
 
 class FourierDescriptor():
     """A data class to handle the creation and refinement of fourier descriptors for individual images.  
@@ -1212,6 +1252,8 @@ class FourierDescriptor():
         `rotate_contour`: Rotate the contour to have the tip pointing in the y direction as much as possible
         `find_startpoint`: Start the contour at the point closest to the tip of the nose. 
 
+        :return: a fourier descriptor for the contour associated with this object.
+
         """
         interpolated = self.normalized_interpolation(512)
         if mode is "elliptic":
@@ -1229,17 +1271,235 @@ class FourierDescriptor():
 
         return initialized
 
-    def evaluate_processed_coefs(self,animal,processed_coefs):
+    def superimpose_centered_contour(self,animal,centered_contour):
+        """Given a centered, oriented contour, superimposes it on the original location and rotation of the object's contour. 
+
+        """
+        ## Get the contours: 
+        assert centered_contour.shape[0] == 2
+        ## Get animal identities:
+        identitydict = {"virgin":0,"dam":1}
+        ## Rotate to original position
+        angle = -(self.mouseangles[identitydict[animal]]-np.pi/2) ## rotate towards the vertical axis.
+        rotmatrix = np.array([[np.cos(angle),np.sin(angle)],[-np.sin(angle),np.cos(angle)]])
+        rotated = np.matmul(rotmatrix,centered_contour)
+        ## Recenter:
+        recentered = rotated+self.points[::-1,3,identitydict[animal]][:,None]
+        return recentered
+
+    def evaluate_processed_coefs(self,animal,processed_contour,image = True):
         """Given a set of contour reconstructions generated by PCA, evaluates them against the corresponding frame of data. This evaluation takes three steps: 1) recenter and rotate the contour to the original position in the frame of video. 2) Calculate distance to the original contour. 3) get the image in a bounding box around the processed coefficient. 
         
         :param animal: string identifying the animal that we will be using 
-        :param processed_coefs: 
+        :param processed_contour: A contour of shape (2,number_features) that we will be aligning. 
         """
-        ## Get the contour 
+        recentered = self.superimpose_centered_contour(animal,processed_contour)
+        ## Now get the interpolation of the original contour for comparison:
+        interp = self.normalized_interpolation(recentered.shape[1])[animal].T
+        start = recentered[:,0]
+        z = interp-start[:,None]
+        startloc = np.argmin(np.linalg.norm(z,axis = 0))
 
+        rotated = np.concatenate([interp[:,startloc:],interp[:,:startloc]],axis = 1)
+        ## Now get the root mean squared distance pointwise: 
+        procrust = np.linalg.norm(recentered-rotated)
+        ## Note that this is a lower bound on the procrustes distance, as the rotation and scaling is not guaranteed to be optimal (as it comes from keypoint alignment.)
+        if image == True:
+            ## Finally, get the image underneath the contour:
+            integer_contour = np.round(recentered).astype(int)
+            ## Zero mask:
+            zeros_mask = np.zeros_like(self.image[:,:,0])
+            print(zeros_mask.shape)
+            zeros_mask[integer_contour[0,:],integer_contour[1,:]] = 1
+            zeros_mask = ndi.binary_fill_holes(zeros_mask)
+            only_mouse = np.zeros_like(self.image)+1
+            only_mouse[zeros_mask,:] = self.image[zeros_mask,:]
 
+            return procrust,only_mouse
+        else:
+            return procrust
 
+class PoseDistribution():
+    """Takes in a collection of fourier descriptors, then applies pca to them, and builds a corresponding gaussian distribution for them. Given an index, can return the relevant image, contour (real space), points, centered and normalized contour, fft (real or complex format), or pca weights. Can also return evaluation function that give the likelihood of any set of points given a complementary other set of points. 
+
+    """
+    def __init__(self,all_fds,n_components = 10):
+        """Given a dictionary where keys are frame indices and values are fourierdescriptor objects (as well as the number of components for PCA), applies pca on the contours, and then creates a joint pose-contour gaussian distribution. Allows for arbitrary conditioning on some subset of points as well.  
+        Much of the code here will be inherited from the later part of the LabeledData object workflow: 
+        {FourierDescriptor.process_contour()}
+        organize_fourierdicts()
+        pcadict = get_pca
+        distrib_params = mean,cov = get_gaussian_contour_pose_distribution()
+
+        """
+        assert type(all_fds) == dict,"must give dictionary, not {}".format(type(all_fds))
+        for ind,item in all_fds.items():
+            assert type(ind) == int 
+            assert "image" in item.__dict__.keys()
+            assert "contours" in item.__dict__.keys()
+            assert "points" in item.__dict__.keys()
+
+        ## First get out the fft representations: 
+        all_ffts = {}
+        for ind,item in all_fds.items():
+            all_ffts[ind] = item.process_contour()
         
+        ## Organize them in to an array for easy manipulation:
+        organized_ffts = self.organize_fourierdicts(all_ffts)
 
+        ## Get pca representation:
+        pcadict = self.get_pca(organized_ffts,n_components)
+
+        ## Now get distributional info for both animals: 
+        animals = {"virgin":0,"dam":1}
+        distrib_params = {}
+
+        for animal in animals:
+            mean,cov = self.get_gaussian_contour_pose_distribution(animal,pcadict[animal]["weights"],all_fds)
+            distrib_params[animal] = {"mean":mean,"cov":cov}
+
+        ## Finally assign all properties to self:
+        self.all_fds = all_fds
+        self.all_ffts = all_ffts
+        self.ffts_array = organized_ffts
+        self.pcadict = pcadict
+        self.animals = animals
+        self.distrib_params = distrib_params
+            
+    def organize_fourierdicts(self,fourierdicts):
+        """Given a set of fourier coefficient representations as a dictionary of dictionaries, arranges it into a format that is easier to parse. 
+
+        :param fourierdicts: A dictionary of dictionaries, with keys giving training frame indices and values giving the fourier representation of corresponding contours. Each value is a dictionary specifying the coefficients and frequencies of the corresponding representation.
+        """
+        indices = list(fourierdicts.keys())
+        animals = list(fourierdicts[indices[0]].keys())
+        identifier = fourierdicts[indices[0]][animals[0]].keys() 
+        if "xcoefs" in identifier:
+            fdtype = "elliptic"
+        elif "coefs" in identifier:
+            fdtype = "complex"
+        else:
+            raise Exception("dictionary not formatted correctly.")
+        all_animals = []
+        for animal in animals: 
+            if fdtype is "complex":
+                all_coefs = [fourierdicts[i][animal]["coefs"] for i in indices]
+                animaldata = np.array(all_coefs) ## has shape (len(indices),nb_coefficients)
+            elif fdtype is "elliptic":
+                x_coefs = np.stack([fourierdicts[i][animal]["xcoefs"] for i in indices],axis =0)
+                y_coefs = np.stack([fourierdicts[i][animal]["ycoefs"] for i in indices],axis =0)
+                animaldata = np.stack([x_coefs,y_coefs],axis = 1) ## has shape (len(indices),coordinate,nb_coefficients)
+            all_animals.append(animaldata)
+        ## Assume all have the same frequencies.
+        all_data = {"data":np.stack(all_animals,axis = -1),"fdtype":fdtype,"indices":indices,"animals":animals,"freqs":fourierdicts[indices[0]][animal]["freqs"]}
+        return all_data
+        
+    def get_pca(self,organized_fourierdicts,n_components = None):
+        """Applies PCA to the organized fourier dictionaries, and returns the fitted pca object. A wrapper for sklearn.decomposition.PCA, with appropriate data preprocessing steps. For elliptic fourier series, the fourier transform of each coordinate is conjugate symmetric, so we can just take the positive part of the series without losing information. For the complex fourier series, we must take the whole thing.  
+        :param organized_fourierdicts: Assumes that one has applied the method `organize_fourierdicts` to a dictionary of fourier dictionaries.  
+        :param n_components: (optional) The number of components to use when initializing pca. If none, automatically calculated by sklearn module. 
+        """
+        dampca = PCA(n_components=n_components)
+        virgpca = PCA(n_components=n_components)
+        ## Determine if we are working with complex or elliptic signals. 
+        fdtype = organized_fourierdicts["fdtype"]
+        if fdtype == "elliptic":
+            data = organized_fourierdicts["data"]
+            ## Conjugate symmetric, so we throw away all negative frequencies in the feature axis except the nyquist frequency. Given in standard order, these are the first 256 entries of the frequency vector in the feature axis.
+            inds_nondegenerate = np.arange(data.shape[2]//2+1)
+            orig_shape = data.shape
+            data_nondegen = data[:,:,inds_nondegenerate,:]
+            ## Now we can stack the real and imaginary parts in the feature axis. 
+            data_realimag = np.concatenate([np.real(data_nondegen),np.imag(data_nondegen)], axis = 2)
+            ## Now we stack x and y in the feature axis.
+            data_xy = data_realimag.reshape(orig_shape[0],orig_shape[1]*(orig_shape[2]+2),orig_shape[3])
+
+            virginweights = virgpca.fit_transform(data_xy[:,:,0])
+            damweights = dampca.fit_transform(data_xy[:,:,1])
+            pcadict = {"virgin":{"pca":virgpca,"weights":virginweights},"dam":{"pca":dampca,"weights":damweights},"indices":organized_fourierdicts["indices"]}
+        else:
+            raise NotImplementedError("Only implemented elliptic transform features so far.")
+            
+        return pcadict
+
+    def get_gaussian_contour_pose_distribution(self,animal,pca_weights,all_fds):
+        """ Given an array of pca weights and dictionary of fourier descriptors corresponding to the training frames they belong to, constructs a multivariate gaussian distribution in which the first 8 points give the relative marker points of the animal (relative to the centroid and rotated so that the nose tip is facing upwards), and the remaining components give the pca weights of the contour's fourier decomposition. Note that we will require the existence of a trained pca object in order to make use of this distribution. 
+        :param animal: An indicator of the animal we want to solve the problem for. Will be virgin or dam. 
+        :param pca_weights: A set of pc weights of shape (number_frames,number_features). 
+        :param all_fds: A dictionary of fourierdescriptor objects, with frame indices as keys and FourierDescriptor objects as values.
+        :return: The mean and variance of a gaussian distribution corresponding to the given data. 
+        """
+        dataindices = {"dam":1,"virgin":0}
+        assert animal in dataindices.keys()
+        ## First form the data: 
+        remove_centroid = np.array([0,1,2,4])
+        ## Get the releant animal, remove the centroid (will be zero, and flatten the xy coordinates.)
+        all_points_list = [all_fds[ind].process_points() for ind in all_fds.keys()]
+
+        relevant_poses = np.stack([all_fds[ind].process_points()[:,remove_centroid,dataindices[animal]].flatten(order = "F") for ind in all_fds.keys()],axis = 0)
+        for i in range(len(relevant_poses)):
+            relevant_pose = relevant_poses[i,:]
+            pose = relevant_pose.reshape(2,4,order = "F")
+
+        concat_data = np.concatenate([relevant_poses,pca_weights],axis =1)
+        mean = np.mean(concat_data,axis = 0)
+        cov = np.cov(concat_data,rowvar = False)
+        return mean,cov
+
+    def get_MAP_features(self,vector,animal):
+        """When given a vector of the right shape with some true entries and some nans, will return the same vector with those NaN entries filled in by the MAP estimate given the properties of the appropriate distribution. 
+
+        :param vectors: a set of vectors of shape (nb_vectors,feature_length) that we will be deriving map estimates for. Must be consistent in what entries contain NaNs.  
+        :param animal: a string specifying what animal to regress against. 
+        """
+        assert len(vector.shape) == 2
+        assert vector.shape[1] == len(self.distrib_params[animal]["mean"])
+        ## Assert consistency of Nans 
+        nans_prime = np.where(np.isnan(vector[0,:]))[0]
+        for n in nans_prime:
+            print(vector[:,n])
+            assert np.all(np.isnan(vector[:,n]))
+
+        length = len(self.distrib_params[animal]["mean"])
+        indexvec = np.arange(length)
+
+        ## Where is this vector nan, collect terms and move them (order maintained) to the end of the sequence
+        nanvec = np.isnan(vector[0,:])
+        nb_nans = np.sum(nanvec)
+        nb_given = length-nb_nans
+        addvec = nanvec*length
+        ## Permute gives the ordering under which to perform conditioning, and reference gives the ordering to bring you back.
+        permute = np.argsort(indexvec+addvec).squeeze()
+        reference = np.argsort(indexvec[permute]).squeeze()
+
+        ## Now order your parameters: 
+        mean = self.distrib_params[animal]["mean"]
+        cov = self.distrib_params[animal]["cov"]
+
+        mean_sorted = mean[permute] 
+        cov_sorted = cov[permute][:,permute]
+        vector_sorted = vector[:,permute]
+
+        mean_given = mean_sorted[:nb_given]
+        mean_nan = mean_sorted[nb_given:]
+        cov_given = cov_sorted[:nb_given,:nb_given]
+        cov_nan = cov_sorted[nb_given:,nb_given:]
+        cov_gn = cov_sorted[:nb_given,nb_given:]
+        cov_ng = cov_gn.T
+        vector_given = vector_sorted[:,:nb_given]
+
+        ## Do conditioning:
+        prefactor = vector_given - mean_given[None,:]
+        factor = np.matmul(cov_ng,np.linalg.solve(cov_given,prefactor.T)).T
+        print(prefactor,"prefactor")
+        vector_map_est = mean_nan[None,:]+factor
+
+        vector_concatenated = np.concatenate([vector_given,vector_map_est],axis = 1)
+
+        ## Reorder: 
+        reordered = vector_concatenated[:,reference]
+
+
+        return reordered
 
 
