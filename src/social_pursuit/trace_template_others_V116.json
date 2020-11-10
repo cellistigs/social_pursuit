@@ -1,0 +1,29 @@
+{
+"trace_directory":"/Volumes/TOSHIBA EXT STO/Legacy_Traces",
+"traces_expected":[
+    {
+        "ExperimentName":"V116_03092018",
+        "VideoName":"V116, IC_S9, IC_S10_03092018_cohousing-Camera-1-Animal-1-Segment1.avi",
+        "ConfigName":"config.py", 
+        "GroundTruth":"dataset_V116, IC_S9, IC_S10_03092018_cohousingfull_pursuit_gt_ethogram"
+    },
+    {
+        "ExperimentName":"V116_03102018",
+        "VideoName":"V116, IC_S9, IC_S10_03102018_cohousing no2-Camera-1-Animal-1-Segment1.avi",
+        "ConfigName":"config.py",
+        "GroundTruth":"Behavior of V116_03102018.xlsx"
+    },
+    {
+        "ExperimentName":"V116_03112018",
+        "VideoName":"../V116_03102018/V116, IC_S9, IC_S10_03102018_cohousing-Camera-1-Animal-1-Segment1.avi",
+        "ConfigName":"../V116_03102018/config.py",
+        "GroundTruth":"Behavior of V116_cohousing.xlsx"
+    },
+    {
+        "ExperimentName":"V116_03122018",
+        "VideoName":"V116_03122018_cohousing-Camera-1-Animal-1-Segment1.avi",
+        "ConfigName":"config.py",
+        "GroundTruth":"dataset_V116_03122018_cohousingfull_pursuit_gt_ethogram"
+    }
+]
+}
