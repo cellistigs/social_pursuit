@@ -296,7 +296,7 @@ class LabeledData(object):
             for i in id_0[:p]:
                 mean = norm_mean[j,i] 
                 std = norm_std[j,i]
-                pairwise_dists[(j,i)] = (mean,std)
+                pairwise_dists[(j+5*mouse,i+5*mouse)] = (mean,std)
         return pairwise_dists
 
     def hists_wholemouse(self,indices,mouse,bins = None):
