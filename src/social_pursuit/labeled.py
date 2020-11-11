@@ -4,6 +4,7 @@ statistics on the training data to consider as ground truth going forwards.
 '''
 
 import numpy as np
+import jax.numpy as jnp
 import scipy
 import pandas as pd
 import matplotlib
@@ -278,7 +279,7 @@ class LabeledData(object):
 
 ## Define iteration over all pairwise for a mouse:
     def stats_wholemouse(self,indices,mouse):
-        """Given a range of time indices and a pair of part indices, returns dictionary representation of distance between points.
+        """UNTESTED Given a range of time indices and a pair of part indices, returns dictionary representation of distance between points.
 
         :param indices: a numpy array of the indices in the training data you care about. 
         :param mouse: can be 0 or 1, indicating the virgin or dam.
@@ -286,9 +287,10 @@ class LabeledData(object):
         """
         assert mouse in [0,1]
         norm = self.distance_wholemouse_matrix(indices,mouse)
+        print(norm.shape,"norm shape")
         norm_mean = np.mean(norm,axis = 0)
         norm_std = np.std(norm,axis = 0)
-        id_0 = np.arange(5)+5*mouse
+        id_0 = np.arange(5)#+5*mouse
         pairwise_dists = {}
         for p,j in enumerate(id_0):
             for i in id_0[:p]:
@@ -1012,6 +1014,7 @@ class LabeledData(object):
         markers_flat = markers_nocent.reshape(-1,8,order = "F")
 
         prefactor = markers_flat-mean_markers[None,:]
+        #print(prefactor,"prefactor_data")
         factor = np.matmul(cov_cm,np.linalg.solve(cov_mm,prefactor.T)).T
         return mean_contour[None,:]+factor
 
@@ -1021,7 +1024,7 @@ class FourierDescriptor():
 
     :param image:
     :param contours: a dictionary with two entries: one for the dam and one for the virgin, with corresponding image contours.
-    :param points:
+    :param points: a numpy array of shape (xy,part,animal) giving the locations of the animals as detected in the frame. 
     """
     def __init__(self,image,contours,points):
         """Filters out misspecified input data.
@@ -1365,6 +1368,42 @@ class PoseDistribution():
         self.pcadict = pcadict
         self.animals = animals
         self.distrib_params = distrib_params
+
+    def pca_map(self,animal,vec):
+        """Formerly lambda functions
+
+        """
+        pca_components = self.pcadict[animal]["pca"].components_
+        pca_mean = self.pcadict[animal]["pca"].mean_
+
+        offset =  vec-pca_mean
+        pca_map =  jnp.matmul(pca_components,(offset))
+        return pca_map
+
+    def pca_imap(self,animal,weights):
+        """Formerly lambda functions
+
+        """
+        pca_components = self.pcadict[animal]["pca"].components_
+        pca_mean = self.pcadict[animal]["pca"].mean_
+
+        pca_imap = jnp.matmul(pca_components.T,weights)+pca_mean
+        return pca_imap 
+
+    def evaluate(self,animal,vector):
+        """UNTESTED Evaluates the gaussian likelihood of a vector under the joint model. 
+
+        """
+        mean = self.distrib_params[animal]["mean"]
+        cov = self.distrib_params[animal]["cov"]
+
+        prefactor = vector-mean
+        solved = np.linalg.solve(cov,prefactor)
+        return np.dot(prefactor,solved)
+
+
+
+
             
     def organize_fourierdicts(self,fourierdicts):
         """Given a set of fourier coefficient representations as a dictionary of dictionaries, arranges it into a format that is easier to parse. 
@@ -1457,7 +1496,6 @@ class PoseDistribution():
         ## Assert consistency of Nans 
         nans_prime = np.where(np.isnan(vector[0,:]))[0]
         for n in nans_prime:
-            print(vector[:,n])
             assert np.all(np.isnan(vector[:,n]))
 
         length = len(self.distrib_params[animal]["mean"])
@@ -1491,15 +1529,75 @@ class PoseDistribution():
         ## Do conditioning:
         prefactor = vector_given - mean_given[None,:]
         factor = np.matmul(cov_ng,np.linalg.solve(cov_given,prefactor.T)).T
-        print(prefactor,"prefactor")
         vector_map_est = mean_nan[None,:]+factor
 
         vector_concatenated = np.concatenate([vector_given,vector_map_est],axis = 1)
 
         ## Reorder: 
         reordered = vector_concatenated[:,reference]
-
-
         return reordered
+
+    def vectorize_pose(self,posearray,vet = True):
+        """Convert a centered array describing the pose of an animal to a vector.  
+        :param posearray: an array of poses of shape (2,5) describing the different poses of an animal. This should be a centered and rotated pose for this representation to work appropriately. 
+        :param vet: If true, will check if pose is correctly centered and rotated before applying transformation. 
+        """
+        assert posearray.shape == (2,5)
+        if not np.any(np.isnan(posearray[:,3])):
+            ## Corresponds to centering and rotation
+            assert np.all(np.abs(posearray[:,3]) < 1e-6),"pose is not properly centered, will cause issues"
+        if not np.isnan(posearray[1,0]):
+            assert np.abs(posearray[1,0]) < 1e-6,"pose is not properly rotated, will cause issues. "
+
+        noncent = np.array([0,1,2,4])
+        markers_nocent = posearray[:,noncent]
+
+        return markers_nocent.reshape(8,order = "F")
+
+    def vectorize_fft(self,to_vectorize):
+        """Takes an fft representation in (xy,features) form with complex entries, and returns a vectorized representation with real entries. Used to convert between contour and pca compatible representations. 
+        :param to_vectorize: the fft representation to be vectorized, of shape (xy,complex features).
+
+        """
+        return np.concatenate([np.real(to_vectorize),np.imag(to_vectorize)],axis = 1).flatten()
+
+    def stack_pose(self,vectorized_markers):
+        """UNTESTED Takes a vectorized representation of the pose of an animal, and returns a representation of the form (xy,part)
+
+        """
+        vectorized_markers.reshape(2,4,order = "F")
+        withcent = np.insert(vectorized_markers,3,axis = 1,values = 0)
+        return withcent
+
+
+    def stack_fft(self,vectorized_fft):
+        """UNTESTED Takes a vectorized representation of the fft and returns a xy, complex one ready for application of irfft.  
+        """
+        fft_reshape = vectorized_fft.reshape(2,-1)
+        featurelength = int(fft_reshape.shape[-1]//2)
+        fft_reshape_complex = fft_reshape[:,:featurelength] +1j*fft_reshape[:,featurelength:]
+        return fft_reshape_complex
+
+    def fft_to_contour():
+        pass
+
+    def contour_to_fft():
+        pass
+
+    def fft_to_pcs():
+        pass
+
+    def pcs_to_fft():
+        pass
+
+    def pcs_to_contour(self,pcweights,animal):
+        """UNTESTED Given a set of pc weights, returns the corresponding contour representation centered at the origin.
+
+        """
+        vectorized_ffts = self.pca_imap(animal,pcweights)
+        stacked_ffts = self.stack_fft(vectorized_ffts)
+        coords = np.fft.irfft(stacked_ffts,axis = 1)
+        return coords
+
 
 
