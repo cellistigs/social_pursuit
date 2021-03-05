@@ -1,0 +1,66 @@
+{
+"tmp_storage_loc":"/home/ubuntu/social_tmp",
+"traces_storage_loc":"/home/ubuntu/RTTemp_Traces",
+"traces_expected":[
+    {
+        "ExperimentName":"TempTrial2",
+        "VideoName":"TempTrial2_left.mpg",
+        "ConfigName":"TempTrial2config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial5",
+        "VideoName":"TempTrial5_middle_right.mpg",
+        "ConfigName":"TempTrial5config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial7",
+        "VideoName":"TempTrial7_middle.mpg",
+        "ConfigName":"TempTrial7config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial8",
+        "VideoName":"TempTrial8_right.mpg",
+        "ConfigName":"TempTrial8config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial9",
+        "VideoName":"TempTrial9_left.mpg",
+        "ConfigName":"TempTrial9config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial10",
+        "VideoName":"TempTrial10_middle.mpg",
+        "ConfigName":"TempTrial10config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial11",
+        "VideoName":"TempTrial11_left.mpg",
+        "ConfigName":"TempTrial11config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial12",
+        "VideoName":"TempTrial12_right.mpg",
+        "ConfigName":"TempTrial12config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial14",
+        "VideoName":"TempTrial14_left_middle.mpg",
+        "ConfigName":"TempTrial14config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial15",
+        "VideoName":"TempTrial15_left_right.mpg",
+        "ConfigName":"TempTrial15config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial16",
+        "VideoName":"TempTrial16_middle.mpg",
+        "ConfigName":"TempTrial16config.yaml"
+    },
+    {
+        "ExperimentName":"TempTrial17",
+        "VideoName":"TempTrial17_right.mpg",
+        "ConfigName":"TempTrial17config.yaml"
+    }
+                ]
+}
