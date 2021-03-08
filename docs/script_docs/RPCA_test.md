@@ -12,4 +12,10 @@ Interesting future directions:
 - How does this compare to neural network approaches? (speed, performance)
 - Is there room for improvement in what people have considered?  
 
+Update 3/8, 12:34
+It turns out that accelerating this computation by using GPUs is not necessarily a good option. It looks like using GPUs we run into OOM issues very quickly, while using the 8 cpus on the p3.2 machine we actually do get a substantial increase in performance. We can revise our future directions as follows: 
+- multi core parallelization through numpy seems like quite a good option. We can probably extend this by using JAX just in time compulation on the update step internally.  
+- How much does the multi-core benefit help us? We should time this. 
+
+
 

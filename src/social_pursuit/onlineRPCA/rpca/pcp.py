@@ -173,7 +173,11 @@ def pcp_jax(M, lam=jnp.nan, mu=jnp.nan, factor=1, tol=10**(-7), maxit=1000):
         # L has closed form solution (singular value thresholding)
         Y = X - S;
         dL = L;       
+        print(Y.shape)
         U, sigmas, V = jnp.linalg.svd(Y, full_matrices=False);
+        VT, sigmas, UT = jnp.linalg.svd(Y.T, full_matrices=False);
+        #VT, sigmas, UT = jax.scipy.linalg.svd(Y, full_matrices=False,overwrite_a = True);
+        U,V = UT.T,VT.T
         rank = (sigmas > 1/mu).sum()
         Sigma = jnp.diag(sigmas[0:rank] - 1/mu)
         L = jnp.dot(jnp.dot(U[:,0:rank], Sigma), V[0:rank,:])

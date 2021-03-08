@@ -16,12 +16,14 @@ def get_dataarray():
     data = LabeledData(labeled_data,additionalpath)
     frameinds = [1,2,3,4]
     frames = data.get_images(frameinds)
-    flatframes = [f.flatten()[:10000] for f in frames]
+    flatframes = [f.flatten() for f in frames]
     dataarray = np.stack(flatframes,axis = -1)
     yield dataarray
 
 def test_base_svd(get_dataarray):
     pcp(get_dataarray)
-def test_jax_svd(get_dataarray):
-    pcp_jax(get_dataarray)
-    assert 0 
+#%def test_jax_svd(get_dataarray):
+#%    pcp_jax(get_dataarray).block_until_ready()
+#%    assert 0 
+
+
