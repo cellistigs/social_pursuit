@@ -5,9 +5,9 @@ from social_pursuit.onlineRPCA.rpca.pcp import pcp
 import joblib
 
 from script_doc_utils import initialize_doc,insert_image,save_and_insert_image,get_relative_image_path,insert_vectors_as_table
-datapath = os.path.join("/Volumes/TOSHIBA EXT STO/RTTemp_Traces/TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat")
-labeled_data = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/CollectedData_Taiga.h5"
-additionalpath = "/Volumes/TOSHIBA EXT STO/Video_Pipelining/training_data/"
+datapath = os.path.join(os.getenv("HOME"),"data/TempTrial2roi_2cropped_part2DeepCut_resnet50_social_carceaAug29shuffle1_1030000processed.mat")
+labeled_data = os.path.join(os.getenv("HOME"),"data/training_data/CollectedData_Taiga.h5")
+additionalpath = os.path.join(os.getenv("HOME"),"data/training_data/")
 
 if __name__ == "__main__":
     md = initialize_doc()
