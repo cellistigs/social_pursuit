@@ -28,11 +28,14 @@ I'm now trying to run RPCA on the entire sequence of training frames from the or
 - it could be worthwhile to jit those parts of the code that are not dependent on the rank- worth looking into in the future.  
 - look into alternatives. 
     - There are some nice looking online algorithms for this. OR-PCA, in particular seems pretty well principled as an approach here. Try testing this out. 
-- An interesting approach could be to initialize your background estimate from the training set with batch RPCA, and then update on videos with ORPCA. 
+- An interesting approach could be to initialize your background estimate from the training set with batch RPCA, and then update on videos with ORPCA. Read this paper thoroughly, as it seems like a great use case for your dataset in particular (we don't expect slowly changing subspaces, nor change points.)
+- Reach out to Ian about SVD implementations. Maybe there is something smart we could be doing here to improve performance. 
 
 After training on the whole dataset, the resulting training frames and background look like this: 
 
 image here. 
+
+
 
 In general, this has been a good lesson in 1) reviewing your linear algebra, and 2) the implementation complexity of optimization algorithms that depend upon cpu/gpu. 
 
