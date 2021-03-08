@@ -18,4 +18,22 @@ It turns out that accelerating this computation by using GPUs is not necessarily
 - How much does the multi-core benefit help us? We should time this. 
 
 
+Update 3/8, 4:05
+We tried working with JAX. Bare jax does seem to provide a speed up of 30-50% (just looking at overall compute time). I tried to use Jit as well to submit the whole inner loop, but unfortunately the dependence of the algorithm on the rank of the matrix makes it impossible to jit via JAX- all possible implementations, whether by truncating the matrix or taking a dynamic slice and assigning to 0, change the shape of an array (https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html).  
+
+I also tried jitting this whole inner loop via numba, albeit with significantly less time taken to read the documentation. It fails at the first in place assignment (`M[unobserved] = 0`), and complains alot about external functions.  
+
+I'm now trying to run RPCA on the entire sequence of training frames from the original training set (frames 1-100). I expect this to take a while- for some reason the CPU process utilization looks to be much lower than when the first four frames were being analyzed. It's probably worth examining how fast these updates go with tqdm.  
+
+- it could be worthwhile to jit those parts of the code that are not dependent on the rank- worth looking into in the future.  
+- look into alternatives. 
+    - There are some nice looking online algorithms for this. OR-PCA, in particular seems pretty well principled as an approach here. Try testing this out. 
+- An interesting approach could be to initialize your background estimate from the training set with batch RPCA, and then update on videos with ORPCA. 
+
+After training on the whole dataset, the resulting training frames and background look like this: 
+
+image here. 
+
+In general, this has been a good lesson in 1) reviewing your linear algebra, and 2) the implementation complexity of optimization algorithms that depend upon cpu/gpu. 
+
 
